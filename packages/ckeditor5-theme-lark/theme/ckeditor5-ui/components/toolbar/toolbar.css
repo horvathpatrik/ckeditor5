@@ -49,6 +49,8 @@
 		/* Make sure items wrapped to the next line have v-spacing */
 		margin-top: var(--ck-spacing-small);
 		margin-bottom: var(--ck-spacing-small);
+		/* Toolbar width fix */
+		position: static;
 	}
 
 	&.ck-toolbar_vertical {

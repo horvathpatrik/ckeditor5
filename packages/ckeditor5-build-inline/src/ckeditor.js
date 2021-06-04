@@ -25,6 +25,7 @@ import PasteFromOffice from '@ckeditor/ckeditor5-paste-from-office/src/pastefrom
 import Table from '@ckeditor/ckeditor5-table/src/table';
 import TableToolbar from '@ckeditor/ckeditor5-table/src/tabletoolbar';
 import TextTransformation from '@ckeditor/ckeditor5-typing/src/texttransformation';
+import FontSize from '@ckeditor/ckeditor5-font/src/fontsize';
 import FontColor from '@ckeditor/ckeditor5-font/src/fontcolor';
 import FontBackgroundColor from '@ckeditor/ckeditor5-font/src/fontbackgroundcolor';
 
@@ -55,6 +56,7 @@ InlineEditor.builtinPlugins = [
 	TableToolbar,
 	TextTransformation,
 	FillBlank,
+	FontSize,
 	FontColor,
 	FontBackgroundColor
 ];
@@ -65,6 +67,7 @@ InlineEditor.defaultConfig = {
 		items: [
 			'heading',
 			'|',
+			'fontSize',
 			'bold',
 			'italic',
 			'underline',
@@ -102,6 +105,9 @@ InlineEditor.defaultConfig = {
 			{ model: 'heading5', view: 'h5', title: 'Heading 5', class: 'ck-heading_heading5' },
 			{ model: 'heading6', view: 'h6', title: 'Heading 6', class: 'ck-heading_heading6' }
 		]
+	},
+	fontSize: {
+		options: [8, 10, 12, 14, 16, 18, 20, 24, 32, 40]
 	},
 	// This value must be kept in sync with the language defined in webpack.config.js.
 	language: 'en'

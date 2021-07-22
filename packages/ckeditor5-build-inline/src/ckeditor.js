@@ -109,6 +109,18 @@ InlineEditor.defaultConfig = {
 	fontSize: {
 		options: [8, 10, 12, 14, 16, 18, 20, 24, 32, 40]
 	},
+	link: {
+		decorators: [
+			{
+				mode: 'manual',
+				label: 'Open in a new tab',
+				attributes: {
+					target: '_blank',
+					rel: 'noopener noreferrer'
+				}
+			}
+		]
+	},
 	// This value must be kept in sync with the language defined in webpack.config.js.
 	language: 'en'
 };

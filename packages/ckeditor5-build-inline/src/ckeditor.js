@@ -107,7 +107,7 @@ InlineEditor.defaultConfig = {
 		]
 	},
 	fontSize: {
-		options: [8, 10, 12, 14, 16, 18, 20, 24, 32, 40]
+		options: [ 8, 10, 12, 14, 16, 18, 20, 24, 32, 40 ]
 	},
 	link: {
 		decorators: [

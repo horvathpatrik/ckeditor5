@@ -76,7 +76,7 @@ export default class Clipboard extends Plugin {
 			const dataTransfer = data.dataTransfer;
 			let content = '';
 
-			if ( dataTransfer.getData( 'text/html' ) ) {
+			if ( !data.asPlainText && dataTransfer.getData( 'text/html' ) ) {
 				content = normalizeClipboardHtml( dataTransfer.getData( 'text/html' ) );
 			} else if ( dataTransfer.getData( 'text/plain' ) ) {
 				content = plainTextToHtml( dataTransfer.getData( 'text/plain' ) );

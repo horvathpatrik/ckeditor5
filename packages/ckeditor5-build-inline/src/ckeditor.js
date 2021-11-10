@@ -28,6 +28,7 @@ import TextTransformation from '@ckeditor/ckeditor5-typing/src/texttransformatio
 import FontSize from '@ckeditor/ckeditor5-font/src/fontsize';
 import FontColor from '@ckeditor/ckeditor5-font/src/fontcolor';
 import FontBackgroundColor from '@ckeditor/ckeditor5-font/src/fontbackgroundcolor';
+import RemoveFormat from '@ckeditor/ckeditor5-remove-format/src/removeformat';
 
 // Custom plugins
 import FillBlank from '../plugins/fillblank';
@@ -58,7 +59,8 @@ InlineEditor.builtinPlugins = [
 	FillBlank,
 	FontSize,
 	FontColor,
-	FontBackgroundColor
+	FontBackgroundColor,
+	RemoveFormat
 ];
 
 // Editor configuration.
@@ -85,7 +87,8 @@ InlineEditor.defaultConfig = {
 			'blockQuote',
 			'insertTable',
 			'undo',
-			'redo'
+			'redo',
+			'removeFormat'
 		]
 	},
 	table: {

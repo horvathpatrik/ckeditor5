@@ -1,15 +1,18 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import Context from '../src/context';
-import ContextPlugin from '../src/contextplugin';
-import Plugin from '../src/plugin';
-import Config from '@ckeditor/ckeditor5-utils/src/config';
-import Locale from '@ckeditor/ckeditor5-utils/src/locale';
-import VirtualTestEditor from './_utils/virtualtesteditor';
-import CKEditorError from '@ckeditor/ckeditor5-utils/src/ckeditorerror';
+import Context from '../src/context.js';
+import ContextPlugin from '../src/contextplugin.js';
+import Plugin from '../src/plugin.js';
+import ClassicTestEditor from './_utils/classictesteditor.js';
+import Config from '@ckeditor/ckeditor5-utils/src/config.js';
+import Locale from '@ckeditor/ckeditor5-utils/src/locale.js';
+import VirtualTestEditor from './_utils/virtualtesteditor.js';
+import CKEditorError from '@ckeditor/ckeditor5-utils/src/ckeditorerror.js';
+
+/* globals document */
 
 describe( 'Context', () => {
 	describe( 'config', () => {
@@ -23,6 +26,18 @@ describe( 'Context', () => {
 			const context = new Context( { foo: 'bar' } );
 
 			expect( context.config.get( 'foo' ) ).to.equal( 'bar' );
+		} );
+
+		it( 'should not set translations in the config', () => {
+			const context = new Context( { translations: {
+				pl: {
+					dictionary: {
+						bold: 'Pogrubienie'
+					}
+				}
+			} } );
+
+			expect( context.config.get( 'translations' ) ).to.equal( undefined );
 		} );
 	} );
 
@@ -96,6 +111,21 @@ describe( 'Context', () => {
 
 			expect( context.locale.uiLanguage ).to.equal( 'en' );
 			expect( context.locale.contentLanguage ).to.equal( 'ar' );
+		} );
+
+		it( 'is configured with the config.translations', () => {
+			const context = new Context( {
+				translations: {
+					pl: {
+						dictionary: {
+							key: ''
+						},
+						getPluralForm: () => ''
+					} }
+			} );
+
+			expect( context.locale.translations.pl.dictionary.key ).to.equal( '' );
+			expect( context.locale.translations.pl.getPluralForm() ).to.equal( '' );
 		} );
 	} );
 
@@ -252,6 +282,90 @@ describe( 'Context', () => {
 			expect( editor.plugins.has( ContextPluginA ) ).to.equal( true );
 			expect( editor.plugins.has( ContextPluginB ) ).to.equal( false );
 		} );
+
+		it( 'should allow substituting a plugin specified as "config.plugins"', async () => {
+			class ErrorPlugin extends ContextPlugin {
+				static get pluginName() {
+					return 'FooPlugin';
+				}
+
+				init() {
+					throw new Error( 'Ooops.' );
+				}
+			}
+
+			class NoErrorPlugin extends ContextPlugin {
+				static get pluginName() {
+					return 'FooPlugin';
+				}
+
+				init() {
+					return Promise.resolve();
+				}
+			}
+
+			const context = await Context.create( {
+				plugins: [ ErrorPlugin ],
+				substitutePlugins: [ NoErrorPlugin ]
+			} );
+
+			expect( context.plugins.get( 'FooPlugin' ) ).to.be.an.instanceof( ContextPlugin );
+			expect( context.plugins.get( 'FooPlugin' ) ).to.be.an.instanceof( NoErrorPlugin );
+		} );
+
+		it( 'should throw an error if specified an invalid type of a plugin for substituting', async () => {
+			class ErrorPlugin extends ContextPlugin {
+				static get pluginName() {
+					return 'FooPlugin';
+				}
+
+				init() {
+					throw new Error( 'Ooops.' );
+				}
+			}
+
+			try {
+				await Context.create( {
+					plugins: [ ErrorPlugin ],
+					substitutePlugins: [ 'NoErrorPlugin' ]
+				} );
+			} catch ( error ) {
+				expect( error ).to.instanceof( CKEditorError );
+				expect( error.message ).match( /^context-initplugins-constructor-only/ );
+			}
+		} );
+
+		it( 'should throw an error if a plugin for substituting does not extend the ContextPlugin class', async () => {
+			class ErrorPlugin extends ContextPlugin {
+				static get pluginName() {
+					return 'FooPlugin';
+				}
+
+				init() {
+					throw new Error( 'Ooops.' );
+				}
+			}
+
+			class NoErrorPlugin extends Plugin {
+				static get pluginName() {
+					return 'FooPlugin';
+				}
+
+				init() {
+					throw new Error( 'Ooops.' );
+				}
+			}
+
+			try {
+				await Context.create( {
+					plugins: [ ErrorPlugin ],
+					substitutePlugins: [ NoErrorPlugin ]
+				} );
+			} catch ( error ) {
+				expect( error ).to.instanceof( CKEditorError );
+				expect( error.message ).match( /^context-initplugins-invalid-plugin/ );
+			}
+		} );
 	} );
 
 	describe( 'destroy()', () => {
@@ -337,6 +451,39 @@ describe( 'Context', () => {
 					expect( context.plugins.get( PluginA ) ).to.be.an.instanceof( ContextPlugin );
 				} );
 		} );
+
+		it( 'should allow substituting a plugin built in the context', async () => {
+			class ErrorPlugin extends ContextPlugin {
+				static get pluginName() {
+					return 'FooPlugin';
+				}
+
+				init() {
+					throw new Error( 'Ooops.' );
+				}
+			}
+
+			class NoErrorPlugin extends ContextPlugin {
+				static get pluginName() {
+					return 'FooPlugin';
+				}
+
+				init() {
+					return Promise.resolve();
+				}
+			}
+
+			class CustomContext extends Context {}
+
+			CustomContext.builtinPlugins = [ ErrorPlugin ];
+
+			const context = await CustomContext.create( {
+				substitutePlugins: [ NoErrorPlugin ]
+			} );
+
+			expect( context.plugins.get( 'FooPlugin' ) ).to.be.an.instanceof( ContextPlugin );
+			expect( context.plugins.get( 'FooPlugin' ) ).to.be.an.instanceof( NoErrorPlugin );
+		} );
 	} );
 
 	describe( 'defaultConfig', () => {
@@ -355,6 +502,94 @@ describe( 'Context', () => {
 
 			expect( context.config.get( 'foo' ) ).to.equal( 4 );
 			expect( context.config.get( 'bar' ) ).to.equal( 2 );
+		} );
+	} );
+
+	describe( 'config.translations', () => {
+		let editor, element;
+
+		beforeEach( () => {
+			element = document.createElement( 'div' );
+			document.body.appendChild( element );
+
+			return ClassicTestEditor
+				.create( element, {
+					translations: {
+						pl: {
+							dictionary: {
+								bold: 'Pogrubienie',
+								'a.b': 'value'
+							}
+						}
+					}
+				} )
+				.then( _editor => {
+					editor = _editor;
+				} );
+		} );
+
+		afterEach( () => {
+			document.body.removeChild( element );
+
+			return editor.destroy();
+		} );
+
+		it( 'should not set translations in the config', () => {
+			expect( editor.config.get( 'translations' ) ).to.equal( undefined );
+		} );
+
+		it( 'should properly get translations with the key', () => {
+			expect( editor.locale.translations.pl.dictionary.bold ).to.equal( 'Pogrubienie' );
+		} );
+
+		it( 'should properly get translations with dot in the key', () => {
+			expect( editor.locale.translations.pl.dictionary[ 'a.b' ] ).to.equal( 'value' );
+		} );
+	} );
+
+	describe( 'defaultConfig.translations', () => {
+		let editor, element;
+
+		beforeEach( () => {
+			element = document.createElement( 'div' );
+			document.body.appendChild( element );
+
+			class TestEditor extends ClassicTestEditor {}
+
+			TestEditor.defaultConfig = {
+				translations: {
+					pl: {
+						dictionary: {
+							bold: 'Pogrubienie',
+							'a.b': 'value'
+						}
+					}
+				}
+			};
+
+			return TestEditor
+				.create( element )
+				.then( _editor => {
+					editor = _editor;
+				} );
+		} );
+
+		afterEach( () => {
+			document.body.removeChild( element );
+
+			return editor.destroy();
+		} );
+
+		it( 'should not set translations in the config', () => {
+			expect( editor.config.get( 'translations' ) ).to.equal( undefined );
+		} );
+
+		it( 'should properly get translations with the key', () => {
+			expect( editor.locale.translations.pl.dictionary.bold ).to.equal( 'Pogrubienie' );
+		} );
+
+		it( 'should properly get translations with dot in the key', () => {
+			expect( editor.locale.translations.pl.dictionary[ 'a.b' ] ).to.equal( 'value' );
 		} );
 	} );
 } );

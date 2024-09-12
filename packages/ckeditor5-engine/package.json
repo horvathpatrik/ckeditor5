@@ -1,6 +1,6 @@
 {
   "name": "@ckeditor/ckeditor5-engine",
-  "version": "23.1.0",
+  "version": "43.1.0",
   "description": "The editing engine of CKEditor 5 – the best browser-based rich text editor.",
   "keywords": [
     "wysiwyg",
@@ -15,38 +15,42 @@
     "collaborative",
     "real-time",
     "framework",
-    "ckeditor5-lib",
     "ckeditor",
     "ckeditor5",
-    "ckeditor 5"
+    "ckeditor 5",
+    "ckeditor5-lib",
+    "ckeditor5-dll"
   ],
+  "type": "module",
+  "main": "src/index.ts",
   "dependencies": {
-    "@ckeditor/ckeditor5-utils": "^23.1.0",
-    "lodash-es": "^4.17.15"
+    "@ckeditor/ckeditor5-utils": "43.1.0",
+    "lodash-es": "4.17.21"
   },
   "devDependencies": {
-    "@ckeditor/ckeditor5-basic-styles": "^23.1.0",
-    "@ckeditor/ckeditor5-block-quote": "^23.1.0",
-    "@ckeditor/ckeditor5-clipboard": "^23.1.0",
-    "@ckeditor/ckeditor5-core": "^23.1.0",
-    "@ckeditor/ckeditor5-editor-classic": "^23.1.0",
-    "@ckeditor/ckeditor5-enter": "^23.1.0",
-    "@ckeditor/ckeditor5-essentials": "^23.1.0",
-    "@ckeditor/ckeditor5-heading": "^23.1.0",
-    "@ckeditor/ckeditor5-image": "^23.1.0",
-    "@ckeditor/ckeditor5-link": "^23.1.0",
-    "@ckeditor/ckeditor5-list": "^23.1.0",
-    "@ckeditor/ckeditor5-paragraph": "^23.1.0",
-    "@ckeditor/ckeditor5-table": "^23.1.0",
-    "@ckeditor/ckeditor5-theme-lark": "^23.1.0",
-    "@ckeditor/ckeditor5-typing": "^23.1.0",
-    "@ckeditor/ckeditor5-ui": "^23.1.0",
-    "@ckeditor/ckeditor5-undo": "^23.1.0",
-    "@ckeditor/ckeditor5-widget": "^23.1.0"
-  },
-  "engines": {
-    "node": ">=12.0.0",
-    "npm": ">=5.7.1"
+    "@ckeditor/ckeditor5-basic-styles": "43.1.0",
+    "@ckeditor/ckeditor5-block-quote": "43.1.0",
+    "@ckeditor/ckeditor5-clipboard": "43.1.0",
+    "@ckeditor/ckeditor5-cloud-services": "43.1.0",
+    "@ckeditor/ckeditor5-core": "43.1.0",
+    "@ckeditor/ckeditor5-editor-classic": "43.1.0",
+    "@ckeditor/ckeditor5-enter": "43.1.0",
+    "@ckeditor/ckeditor5-essentials": "43.1.0",
+    "@ckeditor/ckeditor5-heading": "43.1.0",
+    "@ckeditor/ckeditor5-image": "43.1.0",
+    "@ckeditor/ckeditor5-link": "43.1.0",
+    "@ckeditor/ckeditor5-list": "43.1.0",
+    "@ckeditor/ckeditor5-mention": "43.1.0",
+    "@ckeditor/ckeditor5-paragraph": "43.1.0",
+    "@ckeditor/ckeditor5-table": "43.1.0",
+    "@ckeditor/ckeditor5-theme-lark": "43.1.0",
+    "@ckeditor/ckeditor5-typing": "43.1.0",
+    "@ckeditor/ckeditor5-ui": "43.1.0",
+    "@ckeditor/ckeditor5-undo": "43.1.0",
+    "@ckeditor/ckeditor5-widget": "43.1.0",
+    "typescript": "5.0.4",
+    "webpack": "^5.94.0",
+    "webpack-cli": "^5.1.4"
   },
   "author": "CKSource (http://cksource.com/)",
   "license": "GPL-2.0-or-later",
@@ -58,8 +62,16 @@
     "directory": "packages/ckeditor5-engine"
   },
   "files": [
+    "dist",
     "lang",
-    "src",
-    "theme"
-  ]
+    "src/**/*.js",
+    "src/**/*.d.ts",
+    "theme",
+    "ckeditor5-metadata.json",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p ./tsconfig.json",
+    "build:dist": "node ../../scripts/build-package.mjs"
+  }
 }

@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* globals console:false, document, window */
 
-import InlineEditor from '../../src/inlineeditor';
-import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset';
-import { createObserver } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
+import InlineEditor from '../../src/inlineeditor.js';
+import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
+import { createObserver } from '@ckeditor/ckeditor5-utils/tests/_utils/utils.js';
 
 window.editors = {};
 window.editables = [];
@@ -20,8 +20,10 @@ function initEditors() {
 	function init( selector ) {
 		InlineEditor
 			.create( document.querySelector( selector ), {
+				image: { toolbar: [ 'toggleImageCaption', 'imageTextAlternative' ] },
 				plugins: [ ArticlePluginSet ],
-				toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', 'undo', 'redo' ]
+				toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', 'undo', 'redo' ],
+				menuBar: { isVisible: true }
 			} )
 			.then( editor => {
 				console.log( `${ selector } has been initialized`, editor );

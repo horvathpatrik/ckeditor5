@@ -1,23 +1,23 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import Schema, { SchemaContext } from '../../src/model/schema';
+import Schema, { SchemaContext } from '../../src/model/schema.js';
 
-import Model from '../../src/model/model';
+import Model from '../../src/model/model.js';
 
-import DocumentFragment from '../../src/model/documentfragment';
-import Element from '../../src/model/element';
-import Text from '../../src/model/text';
-import TextProxy from '../../src/model/textproxy';
-import Position from '../../src/model/position';
-import Range from '../../src/model/range';
+import DocumentFragment from '../../src/model/documentfragment.js';
+import Element from '../../src/model/element.js';
+import Text from '../../src/model/text.js';
+import TextProxy from '../../src/model/textproxy.js';
+import Position from '../../src/model/position.js';
+import Range from '../../src/model/range.js';
 
-import { getData, setData, stringify, parse } from '../../src/dev-utils/model';
+import { getData, setData, stringify, parse } from '../../src/dev-utils/model.js';
 
-import AttributeOperation from '../../src/model/operation/attributeoperation';
-import { expectToThrowCKEditorError } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
+import AttributeOperation from '../../src/model/operation/attributeoperation.js';
+import { expectToThrowCKEditorError } from '@ckeditor/ckeditor5-utils/tests/_utils/utils.js';
 
 describe( 'Schema', () => {
 	let schema, root1, r1p1, r1p2, r1bQ, r1bQp, root2;
@@ -47,14 +47,14 @@ describe( 'Schema', () => {
 			expect( schema.getDefinition( 'foo' ) ).to.be.an( 'object' );
 		} );
 
-		it( 'copies definitions', () => {
+		it( 'copies definitions objects', () => {
 			const definitions = {};
 
 			schema.register( 'foo', definitions );
 
 			definitions.isBlock = true;
 
-			expect( schema.getDefinitions().foo ).to.not.have.property( 'isBlock' );
+			expect( schema.getDefinitions().foo.isBlock ).to.be.false;
 		} );
 
 		it( 'throws when trying to register for a single item twice', () => {
@@ -77,7 +77,7 @@ describe( 'Schema', () => {
 			expect( schema.getDefinition( 'foo' ) ).to.have.property( 'isBlock', true );
 		} );
 
-		it( 'copies definitions', () => {
+		it( 'copies definitions objects', () => {
 			schema.register( 'foo', {} );
 
 			const definitions = {};
@@ -85,7 +85,7 @@ describe( 'Schema', () => {
 
 			definitions.isBlock = true;
 
-			expect( schema.getDefinitions().foo ).to.not.have.property( 'isBlock' );
+			expect( schema.getDefinitions().foo.isBlock ).to.be.false;
 		} );
 
 		it( 'throws when trying to extend a not yet registered item', () => {
@@ -164,27 +164,33 @@ describe( 'Schema', () => {
 			expect( definitions.foo ).to.deep.equal( {
 				name: 'foo',
 				allowIn: [ '$root' ],
+				allowChildren: [],
 				allowAttributes: [],
-				isBlock: true
+				isBlock: true,
+				isContent: false,
+				isInline: false,
+				isLimit: false,
+				isObject: false,
+				isSelectable: false
 			} );
 		} );
 
 		it( 'copies all is* types', () => {
 			schema.register( 'foo', {
 				isBlock: true,
-				isFoo: true
+				isInline: true
 			} );
 
 			schema.extend( 'foo', {
-				isBar: true,
-				isFoo: false // Just to check that the last one wins.
+				isSelectable: false,
+				isInline: false // Check that the last one wins.
 			} );
 
 			const definitions = schema.getDefinitions();
 
 			expect( definitions.foo ).to.have.property( 'isBlock', true );
-			expect( definitions.foo ).to.have.property( 'isFoo', false );
-			expect( definitions.foo ).to.have.property( 'isBar', true );
+			expect( definitions.foo ).to.have.property( 'isSelectable', false );
+			expect( definitions.foo ).to.have.property( 'isInline', false );
 		} );
 
 		it( 'does not recompile definitions if not needed', () => {
@@ -207,7 +213,14 @@ describe( 'Schema', () => {
 			expect( definitions.foo ).to.deep.equal( {
 				name: 'foo',
 				allowIn: [ '$root' ],
-				allowAttributes: []
+				allowChildren: [],
+				allowAttributes: [],
+				isBlock: false,
+				isContent: false,
+				isInline: false,
+				isLimit: false,
+				isObject: false,
+				isSelectable: false
 			} );
 		} );
 
@@ -221,7 +234,14 @@ describe( 'Schema', () => {
 			expect( definitions.foo ).to.deep.equal( {
 				name: 'foo',
 				allowIn: [],
-				allowAttributes: []
+				allowChildren: [],
+				allowAttributes: [],
+				isBlock: false,
+				isContent: false,
+				isInline: false,
+				isLimit: false,
+				isObject: false,
+				isSelectable: false
 			} );
 		} );
 
@@ -238,7 +258,14 @@ describe( 'Schema', () => {
 			expect( definitions.paragraph ).to.deep.equal( {
 				name: 'paragraph',
 				allowIn: [],
-				allowAttributes: [ 'foo' ]
+				allowChildren: [],
+				allowAttributes: [ 'foo' ],
+				isBlock: false,
+				isContent: false,
+				isInline: false,
+				isLimit: false,
+				isObject: false,
+				isSelectable: false
 			} );
 		} );
 
@@ -256,7 +283,14 @@ describe( 'Schema', () => {
 			expect( definitions.paragraph ).to.deep.equal( {
 				name: 'paragraph',
 				allowIn: [],
-				allowAttributes: [ 'foo' ]
+				allowChildren: [],
+				allowAttributes: [ 'foo' ],
+				isBlock: false,
+				isContent: false,
+				isInline: false,
+				isLimit: false,
+				isObject: false,
+				isSelectable: false
 			} );
 		} );
 	} );
@@ -264,46 +298,46 @@ describe( 'Schema', () => {
 	describe( 'getDefinition()', () => {
 		it( 'returns a definition based on an item name', () => {
 			schema.register( 'foo', {
-				isMe: true
+				isBlock: true
 			} );
 
-			expect( schema.getDefinition( 'foo' ).isMe ).to.be.true;
+			expect( schema.getDefinition( 'foo' ).isBlock ).to.be.true;
 		} );
 
 		it( 'returns a definition based on an element name', () => {
 			schema.register( 'foo', {
-				isMe: true
+				isBlock: true
 			} );
 
-			expect( schema.getDefinition( new Element( 'foo' ) ).isMe ).to.be.true;
+			expect( schema.getDefinition( new Element( 'foo' ) ).isBlock ).to.be.true;
 		} );
 
 		it( 'returns a definition based on a text node', () => {
 			schema.register( '$text', {
-				isMe: true
+				isBlock: true
 			} );
 
-			expect( schema.getDefinition( new Text( 'foo' ) ).isMe ).to.be.true;
+			expect( schema.getDefinition( new Text( 'foo' ) ).isBlock ).to.be.true;
 		} );
 
 		it( 'returns a definition based on a text proxy', () => {
 			schema.register( '$text', {
-				isMe: true
+				isBlock: true
 			} );
 
 			const text = new Text( 'foo' );
 			const textProxy = new TextProxy( text, 0, 1 );
 
-			expect( schema.getDefinition( textProxy ).isMe ).to.be.true;
+			expect( schema.getDefinition( textProxy ).isBlock ).to.be.true;
 		} );
 
 		it( 'returns a definition based on a schema context item', () => {
 			schema.register( 'foo', {
-				isMe: true
+				isBlock: true
 			} );
 			const ctx = new SchemaContext( [ '$root', 'foo' ] );
 
-			expect( schema.getDefinition( ctx.last ).isMe ).to.be.true;
+			expect( schema.getDefinition( ctx.last ).isBlock ).to.be.true;
 		} );
 
 		it( 'returns undefined when trying to get an non-registered item', () => {
@@ -661,6 +695,28 @@ describe( 'Schema', () => {
 
 			schema.checkChild( root1, r1p1 );
 		} );
+
+		it( 'fires custom callback for each item in the context - generic callback', () => {
+			schema.register( 'div' );
+
+			const stub = sinon.stub().returns( true );
+
+			schema.addChildCheck( stub );
+
+			schema.checkChild( [ '$root', 'div', 'paragraph' ], '$text' );
+
+			expect( stub.callCount ).to.equal( 3 ); // $text, paragraph, div. Not called for top-level parent ($root in this case).
+		} );
+
+		it( 'returns false if any of context items is not defined', () => {
+			// Force all elements to be allowed.
+			schema.addChildCheck( () => true );
+
+			// ... but div is not registered.
+			const result = schema.checkChild( [ '$root', 'div', 'paragraph' ], '$text' );
+
+			expect( result ).to.be.false;
+		} );
 	} );
 
 	describe( 'checkAttribute()', () => {
@@ -734,59 +790,69 @@ describe( 'Schema', () => {
 	describe( 'addChildCheck()', () => {
 		beforeEach( () => {
 			schema.register( '$root' );
-			schema.register( 'paragraph', {
-				allowIn: '$root'
-			} );
+			schema.register( 'paragraph', { allowIn: '$root' } );
+			schema.register( 'blockQuote', { allowIn: '$root' } );
+			schema.register( 'foo' );
 		} );
 
-		it( 'adds a high-priority listener', () => {
+		it( 'supports generic and specific checks', () => {
+			const spyGeneric = sinon.spy();
+			const spySpecificP = sinon.spy();
+			const spySpecificBar = sinon.spy();
+
+			schema.addChildCheck( spyGeneric );
+			schema.addChildCheck( spySpecificP, 'paragraph' );
+			schema.addChildCheck( spySpecificBar, 'bar' );
+
+			schema.checkChild( [ '$root' ], 'paragraph' );
+
+			expect( spyGeneric.calledOnce ).to.be.true;
+			expect( spySpecificP.calledOnce ).to.be.true;
+			expect( spySpecificBar.called ).to.be.false;
+		} );
+
+		it( 'proper checks order', () => {
 			const order = [];
 
-			schema.on( 'checkChild', () => {
-				order.push( 'checkChild:high-before' );
-			}, { priority: 'high' } );
+			schema.addChildCheck( () => {
+				order.push( 'addChildCheckSpecific' );
+			}, 'paragraph' );
 
 			schema.addChildCheck( () => {
-				order.push( 'addChildCheck' );
+				order.push( 'addChildCheckGeneric' );
 			} );
 
 			schema.on( 'checkChild', () => {
-				order.push( 'checkChild:high-after' );
+				order.push( 'checkChild:high' );
 			}, { priority: 'high' } );
 
 			schema.checkChild( root1, r1p1 );
 
-			expect( order.join() ).to.equal( 'checkChild:high-before,addChildCheck,checkChild:high-after' );
+			expect( order.join() ).to.equal( 'checkChild:high,addChildCheckGeneric,addChildCheckSpecific' );
 		} );
 
-		it( 'stops the event and overrides the return value when callback returned true', () => {
-			schema.register( '$text' );
+		it( 'overrides the declarative check - force allow', () => {
+			expect( schema.checkChild( [ '$root' ], 'foo' ) ).to.be.false;
 
-			expect( schema.checkChild( root1, '$text' ) ).to.be.false;
+			schema.addChildCheck( () => true, 'foo' );
 
-			schema.addChildCheck( () => {
-				return true;
-			} );
-
-			schema.on( 'checkChild', () => {
-				throw new Error( 'the event should be stopped' );
-			}, { priority: 'high' } );
-
-			expect( schema.checkChild( root1, '$text' ) ).to.be.true;
+			expect( schema.checkChild( [ '$root' ], 'foo' ) ).to.be.true;
 		} );
 
-		it( 'stops the event and overrides the return value when callback returned false', () => {
-			expect( schema.checkChild( root1, r1p1 ) ).to.be.true;
+		it( 'overrides the declarative check - force disallow', () => {
+			expect( schema.checkChild( [ '$root' ], 'paragraph' ) ).to.be.true;
 
-			schema.addChildCheck( () => {
-				return false;
-			} );
+			schema.addChildCheck( () => false, 'paragraph' );
 
-			schema.on( 'checkChild', () => {
-				throw new Error( 'the event should be stopped' );
-			}, { priority: 'high' } );
+			expect( schema.checkChild( [ '$root' ], 'paragraph' ) ).to.be.false;
+		} );
 
-			expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+		it( 'uses declarative check when undefined is returned', () => {
+			expect( schema.checkChild( [ '$root' ], 'paragraph' ) ).to.be.true;
+
+			schema.addChildCheck( () => {}, 'paragraph' );
+
+			expect( schema.checkChild( [ '$root' ], 'paragraph' ) ).to.be.true;
 		} );
 
 		it( 'receives context and child definition as params', () => {
@@ -799,67 +865,74 @@ describe( 'Schema', () => {
 		} );
 
 		it( 'is not called when checking a non-registered element', () => {
-			expect( schema.getDefinition( 'foo' ) ).to.be.undefined;
+			expect( schema.getDefinition( 'bar' ) ).to.be.undefined;
 
 			schema.addChildCheck( () => {
 				throw new Error( 'callback should not be called' );
 			} );
 
-			expect( schema.checkChild( root1, 'foo' ) ).to.be.false;
+			expect( schema.checkChild( root1, 'bar' ) ).to.be.false;
 		} );
 	} );
 
 	describe( 'addAttributeCheck()', () => {
 		beforeEach( () => {
-			schema.register( 'paragraph', {
-				allowAttributes: 'foo'
-			} );
+			schema.register( '$root' );
+			schema.register( 'paragraph', { allowIn: '$root', allowAttributes: [ 'foo' ] } );
 		} );
 
-		it( 'adds a high-priority listener', () => {
+		it( 'supports generic and specific checks', () => {
+			const spyGeneric = sinon.spy();
+			const spySpecificX = sinon.spy();
+			const spySpecificBar = sinon.spy();
+
+			schema.addAttributeCheck( spyGeneric );
+			schema.addAttributeCheck( spySpecificX, 'x' );
+			schema.addAttributeCheck( spySpecificBar, 'bar' );
+
+			schema.checkAttribute( [ '$root', 'paragraph' ], 'x' );
+
+			expect( spyGeneric.calledOnce ).to.be.true;
+			expect( spySpecificX.calledOnce ).to.be.true;
+			expect( spySpecificBar.called ).to.be.false;
+		} );
+
+		it( 'proper checks order', () => {
 			const order = [];
 
-			schema.on( 'checkAttribute', () => {
-				order.push( 'checkAttribute:high-before' );
-			}, { priority: 'high' } );
+			schema.addAttributeCheck( () => {
+				order.push( 'addAttributeCheckSpecific' );
+			}, 'foo' );
 
 			schema.addAttributeCheck( () => {
-				order.push( 'addAttributeCheck' );
+				order.push( 'addAttributeCheckGeneric' );
 			} );
 
 			schema.on( 'checkAttribute', () => {
-				order.push( 'checkAttribute:high-after' );
+				order.push( 'checkAttribute:high' );
 			}, { priority: 'high' } );
 
 			schema.checkAttribute( r1p1, 'foo' );
 
-			expect( order.join() ).to.equal( 'checkAttribute:high-before,addAttributeCheck,checkAttribute:high-after' );
+			expect( order.join() ).to.equal( 'checkAttribute:high,addAttributeCheckGeneric,addAttributeCheckSpecific' );
 		} );
 
-		it( 'stops the event and overrides the return value when callback returned true', () => {
+		it( 'overrides the return value when callback returned true', () => {
 			expect( schema.checkAttribute( r1p1, 'bar' ) ).to.be.false;
 
 			schema.addAttributeCheck( () => {
 				return true;
 			} );
 
-			schema.on( 'checkAttribute', () => {
-				throw new Error( 'the event should be stopped' );
-			}, { priority: 'high' } );
-
 			expect( schema.checkAttribute( r1p1, 'bar' ) ).to.be.true;
 		} );
 
-		it( 'stops the event and overrides the return value when callback returned false', () => {
+		it( 'overrides the return value when callback returned false', () => {
 			expect( schema.checkAttribute( r1p1, 'foo' ) ).to.be.true;
 
 			schema.addAttributeCheck( () => {
 				return false;
 			} );
-
-			schema.on( 'checkAttribute', () => {
-				throw new Error( 'the event should be stopped' );
-			}, { priority: 'high' } );
 
 			expect( schema.checkAttribute( r1p1, 'foo' ) ).to.be.false;
 		} );
@@ -893,6 +966,17 @@ describe( 'Schema', () => {
 			schema.register( 'blockQuote', {
 				allowWhere: '$block',
 				allowContentOf: '$root'
+			} );
+			schema.register( 'blockObject', {
+				allowWhere: '$block',
+				isBlock: true,
+				isObject: true
+			} );
+			schema.register( 'inlineObject', {
+				allowWhere: '$text',
+				allowAttributesOf: '$text',
+				isInline: true,
+				isObject: true
 			} );
 		} );
 
@@ -944,6 +1028,34 @@ describe( 'Schema', () => {
 			const position = Position._createAfter( listItem );
 
 			expect( schema.checkMerge( position ) ).to.be.true;
+		} );
+
+		it( 'return false if elements on the left is a block object', () => {
+			const left = new Element( 'blockObject' );
+			const right = new Element( 'paragraph' );
+
+			expect( schema.checkMerge( left, right ) ).to.be.false;
+		} );
+
+		it( 'return false if elements on the right is a block object', () => {
+			const left = new Element( 'paragraph' );
+			const right = new Element( 'blockObject' );
+
+			expect( schema.checkMerge( left, right ) ).to.be.false;
+		} );
+
+		it( 'return false if both elements are block objects', () => {
+			const left = new Element( 'blockObject' );
+			const right = new Element( 'blockObject' );
+
+			expect( schema.checkMerge( left, right ) ).to.be.false;
+		} );
+
+		it( 'return false if both elements are inline objects', () => {
+			const left = new Element( 'inlineObject' );
+			const right = new Element( 'inlineObject' );
+
+			expect( schema.checkMerge( left, right ) ).to.be.false;
 		} );
 
 		it( 'throws an error if there is no element before the position', () => {
@@ -1065,13 +1177,13 @@ describe( 'Schema', () => {
 				inheritAllFrom: '$block',
 				allowIn: 'div'
 			} );
-			schema.register( 'image', {
+			schema.register( 'imageBlock', {
 				inheritAllFrom: '$block',
 				allowIn: 'widget'
 			} );
 			schema.register( 'caption', {
 				inheritAllFrom: '$block',
-				allowIn: 'image'
+				allowIn: 'imageBlock'
 			} );
 		} );
 
@@ -1100,7 +1212,7 @@ describe( 'Schema', () => {
 			schema.extend( 'article', { isLimit: true } );
 			schema.extend( 'section', { isLimit: true } );
 
-			model.enqueueChange( 'transparent', () => {
+			model.enqueueChange( { isUndoable: false }, () => {
 				setData( model, '<div><section><article>[foo</article><article>bar]</article></section></div>' );
 
 				const section = root.getNodeByPath( [ 0, 0 ] );
@@ -1123,9 +1235,9 @@ describe( 'Schema', () => {
 				'</article>' +
 				'</section>' +
 				'<widget>' +
-				'<image>' +
+				'<imageBlock>' +
 				'<caption>b[a]r</caption>' +
-				'</image>' +
+				'</imageBlock>' +
 				'</widget>' +
 				'</div>'
 			);
@@ -1153,9 +1265,9 @@ describe( 'Schema', () => {
 		it( 'works fine with multi-range selections if the first range has the root element as a limit element', () => {
 			setData(
 				model,
-				'<image>' +
+				'<imageBlock>' +
 				'<caption>[Foo</caption>' +
-				'</image>' +
+				'</imageBlock>' +
 				'<article>' +
 				'<paragraph>Paragraph in article]</paragraph>' +
 				'</article>' +
@@ -1171,9 +1283,9 @@ describe( 'Schema', () => {
 				model,
 				'<paragraph>Paragraph item 1</paragraph>' +
 				'<paragraph>Paragraph [item 2]</paragraph>' +
-				'<image>' +
+				'<imageBlock>' +
 				'<caption>[Foo</caption>' +
-				'</image>' +
+				'</imageBlock>' +
 				'<article>' +
 				'<paragraph>Paragraph in article]</paragraph>' +
 				'</article>'
@@ -1648,6 +1760,16 @@ describe( 'Schema', () => {
 			'<paragraph></paragraph><paragraph>[]</paragraph>'
 		);
 
+		it( 'should return null for a position in graveyard even if there is a paragraph there', () => {
+			model.enqueueChange( { isUndoable: false }, writer => {
+				writer.insertElement( 'paragraph', model.document.graveyard, 0 );
+			} );
+
+			const range = schema.getNearestSelectionRange( model.createPositionFromPath( model.document.graveyard, [ 0 ] ) );
+
+			expect( range ).to.be.null;
+		} );
+
 		describe( 'in case of objects which do not allow text inside', () => {
 			test(
 				'should select nearest object (o[]o) - both',
@@ -1789,7 +1911,7 @@ describe( 'Schema', () => {
 			it( testName, () => {
 				let range;
 
-				model.enqueueChange( 'transparent', () => {
+				model.enqueueChange( { isUndoable: false }, () => {
 					setData( model, data );
 					range = schema.getNearestSelectionRange( selection.anchor, direction );
 				} );
@@ -1900,7 +2022,7 @@ describe( 'Schema', () => {
 			schema.register( 'div', {
 				inheritAllFrom: '$block'
 			} );
-			schema.register( 'image', {
+			schema.register( 'imageBlock', {
 				isObject: true
 			} );
 			schema.extend( '$block', {
@@ -1910,10 +2032,10 @@ describe( 'Schema', () => {
 
 		it( 'should filter out disallowed attributes from given nodes', () => {
 			schema.extend( '$text', { allowAttributes: 'a' } );
-			schema.extend( 'image', { allowAttributes: 'b' } );
+			schema.extend( 'imageBlock', { allowAttributes: 'b' } );
 
 			const text = new Text( 'foo', { a: 1, b: 1 } );
-			const image = new Element( 'image', { a: 1, b: 1 } );
+			const image = new Element( 'imageBlock', { a: 1, b: 1 } );
 
 			root._appendChild( [ text, image ] );
 
@@ -1928,7 +2050,7 @@ describe( 'Schema', () => {
 				expect( writer.batch.operations[ 1 ] ).to.instanceof( AttributeOperation );
 
 				expect( getData( model, { withoutSelection: true } ) )
-					.to.equal( '<$text a="1">foo</$text><image b="1"></image>' );
+					.to.equal( '<$text a="1">foo</$text><imageBlock b="1"></imageBlock>' );
 			} );
 		} );
 
@@ -1960,12 +2082,12 @@ describe( 'Schema', () => {
 				}
 
 				// Allow 'a' on div>image.
-				if ( ctx.endsWith( 'div image' ) && attributeName == 'a' ) {
+				if ( ctx.endsWith( 'div imageBlock' ) && attributeName == 'a' ) {
 					return true;
 				}
 
-				// Allow 'b' on div>paragraph>image.
-				if ( ctx.endsWith( 'div paragraph image' ) && attributeName == 'b' ) {
+				// Allow 'b' on div>paragraph>imageBlock.
+				if ( ctx.endsWith( 'div paragraph imageBlock' ) && attributeName == 'b' ) {
 					return true;
 				}
 
@@ -1977,8 +2099,8 @@ describe( 'Schema', () => {
 
 			const foo = new Text( 'foo', { a: 1, b: 1 } );
 			const bar = new Text( 'bar', { a: 1, b: 1 } );
-			const imageInDiv = new Element( 'image', { a: 1, b: 1 } );
-			const imageInParagraph = new Element( 'image', { a: 1, b: 1 } );
+			const imageInDiv = new Element( 'imageBlock', { a: 1, b: 1 } );
+			const imageInParagraph = new Element( 'imageBlock', { a: 1, b: 1 } );
 			const paragraph = new Element( 'paragraph', { a: 1, b: 1 }, [ foo, imageInParagraph ] );
 			const div = new Element( 'div', [], [ paragraph, bar, imageInDiv ] );
 
@@ -1992,10 +2114,10 @@ describe( 'Schema', () => {
 						'<div>' +
 							'<paragraph a="1">' +
 								'<$text b="1">foo</$text>' +
-								'<image b="1"></image>' +
+								'<imageBlock b="1"></imageBlock>' +
 							'</paragraph>' +
 							'<$text a="1">bar</$text>' +
-							'<image a="1"></image>' +
+							'<imageBlock a="1"></imageBlock>' +
 						'</div>'
 					);
 			} );
@@ -2047,6 +2169,172 @@ describe( 'Schema', () => {
 				expect( getData( model, { withoutSelection: true } ) )
 					.to.equal( '<div><$text a="1">foo</$text>bar<$text a="1">biz</$text></div>' );
 			} );
+		} );
+
+		// Related to https://github.com/ckeditor/ckeditor5/issues/15246.
+		it( 'should filter out only non-allowed root attributes', () => {
+			schema.extend( '$root', { allowAttributes: 'allowed' } );
+
+			model.change( writer => {
+				writer.setAttribute( 'allowed', 'value', root );
+				writer.setAttribute( 'other', true, root );
+
+				schema.removeDisallowedAttributes( [ root ], writer );
+			} );
+
+			expect( root.getAttribute( 'allowed' ) ).to.equal( 'value' );
+			expect( root.getAttribute( 'other' ) ).to.be.undefined;
+		} );
+	} );
+
+	describe( 'getAttributesWithProperty()', () => {
+		let model, doc, root;
+
+		beforeEach( () => {
+			model = new Model();
+			doc = model.document;
+			root = doc.createRoot();
+			schema = model.schema;
+
+			schema.register( 'paragraph', {
+				inheritAllFrom: '$block'
+			} );
+		} );
+
+		it( 'should get an attribute with given property', () => {
+			schema.extend( '$text', { allowAttributes: 'a' } );
+
+			schema.setAttributeProperties( 'a', {
+				isFooable: true
+			} );
+
+			const text = new Text( 'foo', { a: 1 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable' );
+
+			expect( attributesWithProperty ).to.deep.equal( { a: 1 } );
+		} );
+
+		it( 'should get attributes with given property', () => {
+			schema.extend( '$text', { allowAttributes: [ 'a', 'b' ] } );
+
+			schema.setAttributeProperties( 'a', {
+				isFooable: true
+			} );
+
+			schema.setAttributeProperties( 'b', {
+				isFooable: true
+			} );
+
+			const text = new Text( 'foo', { a: 1, b: 2 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable' );
+
+			expect( attributesWithProperty ).to.deep.equal( { a: 1, b: 2 } );
+		} );
+
+		it( 'should get an attribute with given property that matches desired value', () => {
+			schema.extend( '$text', { allowAttributes: [ 'a' ] } );
+
+			schema.setAttributeProperties( 'a', {
+				isFooable: 'yes'
+			} );
+
+			const text = new Text( 'foo', { a: 1 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable', 'yes' );
+
+			expect( attributesWithProperty ).to.deep.equal( { a: 1 } );
+		} );
+
+		it( 'should get attributes with given property that match desired value', () => {
+			schema.extend( '$text', { allowAttributes: [ 'a', 'b' ] } );
+
+			schema.setAttributeProperties( 'a', {
+				isFooable: 'yes'
+			} );
+
+			schema.setAttributeProperties( 'b', {
+				isFooable: 'yes'
+			} );
+
+			const text = new Text( 'foo', { a: 1, b: 2 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable', 'yes' );
+
+			expect( attributesWithProperty ).to.deep.equal( { a: 1, b: 2 } );
+		} );
+
+		it( 'should not return an attribute if it has properties but not the one being lookied for', () => {
+			schema.extend( '$text', { allowAttributes: [ 'a' ] } );
+
+			schema.setAttributeProperties( 'a', {
+				isFooable: true
+			} );
+
+			const text = new Text( 'foo', { a: 1 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isBarable' );
+
+			expect( attributesWithProperty ).to.deep.equal( {} );
+		} );
+
+		it( 'should not return an attribute if it does not have given property', () => {
+			schema.extend( '$text', { allowAttributes: [ 'a' ] } );
+
+			const text = new Text( 'foo', { a: 1 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable' );
+
+			expect( attributesWithProperty ).to.deep.equal( {} );
+		} );
+
+		it( 'should not return an attribute if value does not match', () => {
+			schema.extend( '$text', { allowAttributes: [ 'a' ] } );
+
+			schema.setAttributeProperties( 'a', {
+				isFooable: 'no'
+			} );
+
+			const text = new Text( 'foo', { a: 1 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable', 'yes' );
+
+			expect( attributesWithProperty ).to.deep.equal( {} );
+		} );
+
+		it( 'should return only an attribute that matches value', () => {
+			schema.extend( '$text', { allowAttributes: [ 'a', 'b' ] } );
+
+			schema.setAttributeProperties( 'a', {
+				isFooable: 'no'
+			} );
+
+			schema.setAttributeProperties( 'b', {
+				isFooable: 'yes'
+			} );
+
+			const text = new Text( 'foo', { a: 1, b: 2 } );
+
+			root._appendChild( text );
+
+			const attributesWithProperty = schema.getAttributesWithProperty( root.getChild( 0 ), 'isFooable', 'yes' );
+
+			expect( attributesWithProperty ).to.deep.equal( { b: 2 } );
 		} );
 	} );
 
@@ -2362,7 +2650,7 @@ describe( 'Schema', () => {
 				expect( schema.checkChild( r1p1, r1p1.getChild( 0 ) ) ).to.be.true;
 			} );
 
-			it( 'passes $root>paragraph and $root2>paragraph – where $root2 inherits content of $root' +
+			it( 'passes $root>paragraph and $root2>paragraph – where $root2 inherits content of $root ' +
 			'and paragraph inherits allowWhere from $block', () => {
 				schema.register( '$root' );
 				schema.register( '$root2', {
@@ -2409,6 +2697,263 @@ describe( 'Schema', () => {
 			//
 			// 	expect( schema.checkChild( d, 'a' ) ).to.be.true;
 			// } );
+		} );
+
+		describe( 'allowChildren', () => {
+			it( 'allows item in another item', () => {
+				schema.register( 'paragraph' );
+
+				schema.register( '$root', {
+					allowChildren: 'paragraph'
+				} );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.true;
+			} );
+
+			it( 'supports the array syntax', () => {
+				schema.register( 'paragraph' );
+				schema.register( 'blockQuote' );
+
+				schema.register( '$root', {
+					allowChildren: [ 'paragraph', 'blockQuote' ]
+				} );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.true;
+				expect( schema.checkChild( root1, r1bQ ) ).to.be.true;
+			} );
+
+			it( 'supports circular references', () => {
+				schema.register( '$root', {
+					allowChildren: [ 'paragraph', 'blockQuote' ]
+				} );
+
+				schema.register( 'paragraph', {
+					allowChildren: 'blockQuote'
+				} );
+
+				schema.register( 'blockQuote', {
+					allowChildren: 'paragraph'
+				} );
+
+				expect( schema.checkChild( r1p1, r1bQ ) ).to.be.true;
+				expect( schema.checkChild( r1bQ, r1p1 ) ).to.be.true;
+			} );
+
+			it( 'supports self-reference', () => {
+				schema.register( '$root', {
+					allowChildren: 'paragraph'
+				} );
+
+				schema.register( 'paragraph', {
+					allowChildren: 'paragraph'
+				} );
+
+				expect( schema.checkChild( r1p1, r1p1 ) ).to.be.true;
+			} );
+
+			it( 'passes $root>$paragraph>div>blockQuote - deep nesting', () => {
+				schema.register( '$root', {
+					allowChildren: 'paragraph'
+				} );
+
+				schema.register( 'paragraph', {
+					allowChildren: 'div'
+				} );
+
+				schema.register( 'div', {
+					allowChildren: 'blockQuote'
+				} );
+
+				schema.register( 'blockQuote' );
+
+				const paragraph = new Element( 'paragraph' );
+				root1._appendChild( paragraph );
+
+				const div = new Element( 'div' );
+				paragraph._appendChild( div );
+
+				const blockQuote = new Element( 'blockQuote' );
+				div._appendChild( blockQuote );
+
+				expect( schema.checkChild( root1, paragraph ) ).to.be.true;
+				expect( schema.checkChild( paragraph, div ) ).to.be.true;
+				expect( schema.checkChild( div, blockQuote ) ).to.be.true;
+
+				expect( schema.checkChild( paragraph, blockQuote ) ).to.be.false;
+				expect( schema.checkChild( div, paragraph ) ).to.be.false;
+			} );
+
+			it( 'should keep allowChildren', () => {
+				schema.register( '$root', {
+					allowChildren: 'paragraph'
+				} );
+
+				schema.register( 'paragraph' );
+
+				expect( schema.getDefinition( '$root' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowChildren: [ 'paragraph' ],
+					allowIn: [],
+					name: '$root',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+			} );
+
+			it( 'should resolve allowChildren from allowIn', () => {
+				schema.register( '$root' );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root'
+				} );
+
+				schema.register( 'blockQuote', {
+					allowIn: '$root'
+				} );
+
+				expect( schema.getDefinition( '$root' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowChildren: [ 'paragraph', 'blockQuote' ],
+					allowIn: [],
+					name: '$root',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+			} );
+
+			it( 'should not duplicate allowChildren', () => {
+				schema.register( '$root', {
+					allowChildren: 'paragraph'
+				} );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root'
+				} );
+
+				expect( schema.getDefinition( '$root' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowChildren: [ 'paragraph' ],
+					allowIn: [],
+					name: '$root',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+			} );
+
+			it( 'should add parent item to child allowIn property', () => {
+				schema.register( '$root', {
+					allowChildren: 'paragraph'
+				} );
+
+				schema.register( 'div', {
+					allowChildren: 'paragraph'
+				} );
+
+				schema.register( 'paragraph' );
+
+				expect( schema.getDefinition( 'paragraph' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowChildren: [],
+					allowIn: [ '$root', 'div' ],
+					name: 'paragraph',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+			} );
+
+			it( 'should add parent item to child allowIn property - self reference', () => {
+				schema.register( 'paragraph', {
+					allowChildren: 'paragraph'
+				} );
+
+				expect( schema.getDefinition( 'paragraph' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowChildren: [ 'paragraph' ],
+					allowIn: [ 'paragraph' ],
+					name: 'paragraph',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+			} );
+
+			it( 'should add parent item to child allowIn property - circular reference', () => {
+				schema.register( 'paragraph', {
+					allowChildren: 'blockQuote'
+				} );
+
+				schema.register( 'blockQuote', {
+					allowChildren: 'paragraph'
+				} );
+
+				expect( schema.getDefinition( 'paragraph' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowChildren: [ 'blockQuote' ],
+					allowIn: [ 'blockQuote' ],
+					name: 'paragraph',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+
+				expect( schema.getDefinition( 'blockQuote' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowIn: [ 'paragraph' ],
+					allowChildren: [ 'paragraph' ],
+					name: 'blockQuote',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+			} );
+
+			it( 'should include only one allowIn item for definition defined in both allowIn and allowChildren', () => {
+				schema.register( '$root', {
+					allowChildren: 'paragraph'
+				} );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root'
+				} );
+
+				expect( schema.getDefinition( 'paragraph' ) ).to.deep.equal( {
+					allowAttributes: [],
+					allowChildren: [],
+					allowIn: [ '$root' ],
+					name: 'paragraph',
+					isBlock: false,
+					isContent: false,
+					isInline: false,
+					isLimit: false,
+					isObject: false,
+					isSelectable: false
+				} );
+			} );
 		} );
 
 		describe( 'inheritTypesFrom', () => {
@@ -2552,6 +3097,289 @@ describe( 'Schema', () => {
 			} );
 		} );
 
+		describe( 'disallow rules - children', () => {
+			it( 'does not keep the disallowChildren rule when pointing to a non-registered element', () => {
+				schema.register( '$root' );
+				schema.register( 'paragraph', {
+					allowIn: '$root',
+					allowChildren: [ '$root' ],
+					disallowChildren: [ 'not-existing-elem' ]
+				} );
+
+				const notExisting = new Element( 'not-existing-elem' );
+				r1p1._appendChild( notExisting );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.true;
+				expect( schema.checkChild( r1p1, notExisting ) ).to.be.false;
+			} );
+
+			it( 'does not keep the rule disallowIn when pointing to a non-registered element', () => {
+				schema.register( '$root' );
+				schema.register( 'paragraph', {
+					allowIn: '$root',
+					allowChildren: [ '$root' ],
+					disallowIn: [ 'not-existing-elem' ]
+				} );
+
+				const notExisting = new Element( 'not-existing-elem' );
+				const p = new Element( 'paragraph' );
+				root1._appendChild( notExisting );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.true;
+				expect( schema.checkChild( notExisting, p ) ).to.be.false;
+			} );
+
+			it( 'disallows children in an item with disallowChildren rule', () => {
+				schema.register( '$root' );
+
+				schema.register( 'blockQuote', {
+					allowIn: [ '$root' ],
+					allowContentOf: [ '$root' ],
+					disallowChildren: [ 'paragraph' ]
+				} );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root'
+				} );
+
+				expect( schema.checkChild( r1bQ, r1bQp ) ).to.be.false;
+			} );
+
+			it( 'disallows item in a parent with disallowIn rule', () => {
+				schema.register( '$root' );
+
+				schema.register( 'blockQuote', {
+					allowIn: [ '$root' ],
+					allowContentOf: [ '$root' ]
+				} );
+
+				schema.register( 'paragraph', {
+					allowIn: '$root',
+					disallowIn: 'blockQuote'
+				} );
+
+				expect( schema.checkChild( r1bQ, r1bQp ) ).to.be.false;
+			} );
+
+			it( 'disallows previously allowed items via disallowIn rule', () => {
+				schema.register( '$root', { allowChildren: [ 'paragraph' ] } );
+				schema.register( '$root2', { allowChildren: [ 'paragraph' ] } );
+				schema.register( 'paragraph', {
+					disallowIn: [ '$root', '$root2' ]
+				} );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+				expect( schema.checkChild( root2, r1p1 ) ).to.be.false;
+			} );
+
+			it( 'disallows item if a rule contains both allowChildren and disallowChildren', () => {
+				schema.register( '$root', {
+					allowChildren: [ 'paragraph' ],
+					disallowChildren: [ 'paragraph' ]
+				} );
+
+				schema.register( 'paragraph' );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+			} );
+
+			it( 'disallows item if a rule contains both allowIn and disallowIn', () => {
+				schema.register( '$root' );
+				schema.register( 'paragraph', {
+					allowIn: [ '$root' ],
+					disallowIn: [ '$root' ]
+				} );
+
+				expect( schema.checkChild( root1, r1p1 ) ).to.be.false;
+			} );
+
+			it( 'disallowIn is inherited', () => {
+				schema.register( 'baseParent' );
+				schema.register( 'baseChild', { allowIn: [ 'baseParent' ] } );
+
+				schema.register( 'extendedChild', { inheritAllFrom: 'baseChild', disallowIn: [ 'baseParent' ] } );
+				schema.register( 'extendedChild2', { inheritAllFrom: 'extendedChild' } ); // Direct inherit of a disallow rule.
+				schema.register( 'extendedChild3', { inheritAllFrom: 'extendedChild2' } ); // Indirect inherit of a disallow rule.
+
+				expect( schema.checkChild( [ 'baseParent' ], 'baseChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild2' ) ).to.be.false; // Direct inherit of a disallow rule.
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild3' ) ).to.be.false; // Indirect inherit of a disallow rule.
+
+				// Check if rules for `baseParent` are correctly inherited.
+				schema.register( 'extendedParent', { inheritAllFrom: 'baseParent' } );
+
+				expect( schema.checkChild( [ 'extendedParent' ], 'baseChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild2' ) ).to.be.false; // Direct inherit of a disallow rule.
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild3' ) ).to.be.false; // Indirect inherit of a disallow rule.
+			} );
+
+			it( 'disallowChildren is inherited', () => {
+				schema.register( 'baseParent' );
+				schema.register( 'baseChild', { allowIn: [ 'baseParent' ] } );
+
+				schema.register( 'extendedParent', { inheritAllFrom: 'baseParent', disallowChildren: [ 'baseChild' ] } );
+				schema.register( 'extendedParent2', { inheritAllFrom: 'extendedParent' } ); // Direct inherit of a disallow rule.
+				schema.register( 'extendedParent3', { inheritAllFrom: 'extendedParent2' } ); // Indirect inherit of a disallow rule.
+
+				expect( schema.checkChild( [ 'baseParent' ], 'baseChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'extendedParent' ], 'baseChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'extendedParent2' ], 'baseChild' ) ).to.be.false; // Direct inherit of a disallow rule.
+				expect( schema.checkChild( [ 'extendedParent3' ], 'baseChild' ) ).to.be.false; // Indirect inherit of a disallow rule.
+
+				// Check if rules for `baseChild` are correctly inherited.
+				schema.register( 'extendedChild', { inheritAllFrom: 'baseChild' } );
+
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'extendedParent2' ], 'extendedChild' ) ).to.be.false; // Direct inherit of a disallow rule.
+				expect( schema.checkChild( [ 'extendedParent3' ], 'extendedChild' ) ).to.be.false; // Indirect inherit of a disallow rule.
+			} );
+
+			it( 'disallowIn disallows parents that inherit from the base parent', () => {
+				schema.register( 'baseParent' );
+				schema.register( 'baseChild', { allowIn: [ 'baseParent' ] } );
+
+				schema.register( 'extendedParent', { inheritAllFrom: 'baseParent' } );
+				schema.register( 'extendedChild', { inheritAllFrom: 'baseChild', disallowIn: 'extendedParent' } );
+
+				schema.register( 'extendedParent2', { inheritAllFrom: 'extendedParent' } ); // Direct inherit of a disallow rule.
+				schema.register( 'extendedParent3', { inheritAllFrom: 'extendedParent2' } ); // Indirect inherit of a disallow rule.
+
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'extendedParent2' ], 'extendedChild' ) ).to.be.false; // Direct inherit of a disallow rule.
+				expect( schema.checkChild( [ 'extendedParent3' ], 'extendedChild' ) ).to.be.false; // Indirect inherit of a disallow rule.
+			} );
+
+			it( 'disallowChildren disallows children that inherit from the base child', () => {
+				schema.register( 'baseParent' );
+				schema.register( 'baseChild', { allowIn: [ 'baseParent' ] } );
+
+				schema.register( 'extendedChild', { inheritAllFrom: 'baseChild' } );
+				schema.register( 'extendedParent', { inheritAllFrom: 'baseParent', disallowChildren: [ 'extendedChild' ] } );
+
+				schema.register( 'extendedChild2', { inheritAllFrom: 'extendedChild' } ); // Direct inherit of a disallow rule.
+				schema.register( 'extendedChild3', { inheritAllFrom: 'extendedChild2' } ); // Indirect inherit of a disallow rule.
+
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild2' ) ).to.be.true;
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild3' ) ).to.be.true;
+
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild2' ) ).to.be.false; // Direct inherit of a disallow rule.
+				expect( schema.checkChild( [ 'extendedParent' ], 'extendedChild3' ) ).to.be.false; // Indirect inherit of a disallow rule.
+			} );
+
+			it( 'own allowIn rule has bigger priority than inherited (re-allow)', () => {
+				schema.register( 'baseParent' );
+				schema.register( 'baseChild', { allowIn: 'baseParent' } );
+				schema.register( 'extendedChild', { inheritAllFrom: 'baseChild', disallowIn: 'baseParent' } );
+				schema.register( 'extendedChild2', { inheritAllFrom: 'extendedChild', allowIn: 'baseParent' } );
+				schema.register( 'extendedChild3', { inheritAllFrom: 'extendedChild2' } ); // Re-allow is inherited.
+
+				expect( schema.checkChild( [ 'baseParent' ], 'baseChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild2' ) ).to.be.true;
+				expect( schema.checkChild( [ 'baseParent' ], 'extendedChild3' ) ).to.be.true; // Re-allow is inherited.
+			} );
+
+			it( 'own allowChildren rule has bigger priority than inherited (re-allow)', () => {
+				schema.register( 'baseParent' );
+				schema.register( 'baseChild', { allowIn: 'baseParent' } );
+				schema.register( 'extendedParent', { inheritAllFrom: 'baseParent', disallowChildren: [ 'baseChild' ] } );
+				schema.register( 'extendedParent2', { inheritAllFrom: 'extendedParent', allowChildren: [ 'baseChild' ] } );
+				schema.register( 'extendedParent3', { inheritAllFrom: 'extendedParent2' } ); // Re-allow is inherited.
+
+				expect( schema.checkChild( [ 'baseParent' ], 'baseChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'extendedParent' ], 'baseChild' ) ).to.be.false;
+				expect( schema.checkChild( [ 'extendedParent2' ], 'baseChild' ) ).to.be.true;
+				expect( schema.checkChild( [ 'extendedParent3' ], 'baseChild' ) ).to.be.true; // Re-allow is inherited.
+			} );
+		} );
+
+		describe( 'disallow rules - attributes', () => {
+			it( 'disallows attribute in a paragraph with disallowAttributes rule', () => {
+				schema.register( '$root' );
+				schema.register( 'paragraph', {
+					allowAttributes: [ 'alignment', 'listStyle', 'listType' ],
+					disallowAttributes: [ 'listStyle' ]
+				} );
+
+				expect( schema.checkAttribute( r1p1, 'alignment' ) ).to.be.true;
+				expect( schema.checkAttribute( r1p1, 'listStyle' ) ).to.be.false;
+			} );
+
+			it( 'disallows inherited attribute in a paragraph descendant', () => {
+				schema.register( 'baseElement', {
+					allowAttributes: [ 'alignment', 'listStyle', 'listType', 'indent' ]
+				} );
+				schema.register( 'paragraph', {
+					allowAttributesOf: 'baseElement',
+					disallowAttributes: [ 'alignment', 'indent' ]
+				} );
+				schema.register( 'paragraphDescendant', {
+					allowAttributesOf: 'paragraph'
+				} );
+
+				const baseElem = new Element( 'baseElement' );
+				const p = new Element( 'paragraph' );
+				const pD = new Element( 'paragraphDescendant' );
+
+				expect( schema.checkAttribute( baseElem, 'alignment' ) ).to.be.true;
+				expect( schema.checkAttribute( baseElem, 'indent' ) ).to.be.true;
+				expect( schema.checkAttribute( p, 'alignment' ) ).to.be.false;
+				expect( schema.checkAttribute( p, 'indent' ) ).to.be.false;
+				expect( schema.checkAttribute( pD, 'alignment' ) ).to.be.false;
+				expect( schema.checkAttribute( pD, 'indent' ) ).to.be.false;
+			} );
+
+			it( 'should not inherit attributes which have been disallowed in the ancestor definition', () => {
+				schema.register( 'baseElement', {
+					allowAttributes: [ 'alignment', 'listStyle', 'listType', 'indent' ]
+				} );
+				schema.register( 'paragraph', {
+					allowAttributesOf: 'baseElement',
+					disallowAttributes: [ 'alignment', 'indent' ]
+				} );
+				schema.register( 'paragraphDescendant', {
+					allowAttributesOf: 'paragraph',
+					allowAttributes: [ 'listStart' ]
+				} );
+
+				expect( schema.getDefinition( 'paragraphDescendant' ).allowAttributes )
+					.to.have.members( [ 'listStyle', 'listType', 'listStart' ] );
+				expect( schema.getDefinition( 'paragraphDescendant' ).allowAttributes )
+					.to.not.have.members( [ 'alignment', 'indent' ] );
+			} );
+
+			it( 'should reallow attribute which have been disallowed in the ancestor definition', () => {
+				schema.register( 'baseElement', {
+					allowAttributes: [ 'alignment', 'listStyle', 'listType', 'indent', 'listStart' ],
+					disallowAttributes: [ 'indent' ]
+				} );
+				schema.register( 'paragraph', {
+					allowAttributesOf: 'baseElement',
+					disallowAttributes: [ 'listStart' ]
+				} );
+				schema.register( 'paragraphDescendant', {
+					allowAttributesOf: 'paragraph',
+					allowAttributes: [ 'indent', 'listStart' ]
+				} );
+
+				const baseElem = new Element( 'baseElement' );
+				const p = new Element( 'paragraph' );
+				const pD = new Element( 'paragraphDescendant' );
+
+				expect( schema.checkAttribute( baseElem, 'indent' ) ).to.be.false;
+				expect( schema.checkAttribute( p, 'listStart' ) ).to.be.false;
+				expect( schema.checkAttribute( p, 'indent' ) ).to.be.false;
+				expect( schema.checkAttribute( pD, 'listStart' ) ).to.be.true;
+				expect( schema.checkAttribute( pD, 'indent' ) ).to.be.true;
+			} );
+		} );
+
 		// We need to handle cases where some independent features registered definitions which might use
 		// optional elements (elements which might not have been registered).
 		describe( 'missing structure definitions', () => {
@@ -2578,6 +3406,15 @@ describe( 'Schema', () => {
 				schema.register( '$root' );
 				schema.register( '$text', {
 					allowIn: 'foo404'
+				} );
+
+				expect( schema.checkChild( root1, '$text' ) ).to.be.false;
+			} );
+
+			it( 'does not break when used allowChildren pointing to an non-register element', () => {
+				schema.register( '$root' );
+				schema.register( '$text', {
+					allowChildren: 'foo404'
 				} );
 
 				expect( schema.checkChild( root1, '$text' ) ).to.be.false;
@@ -2761,7 +3598,7 @@ describe( 'Schema', () => {
 				} );
 			},
 			() => {
-				schema.register( 'image', {
+				schema.register( 'imageBlock', {
 					allowWhere: '$block',
 					allowAttributes: [ 'src', 'alt' ],
 					isObject: true,
@@ -2770,7 +3607,7 @@ describe( 'Schema', () => {
 			},
 			() => {
 				schema.register( 'caption', {
-					allowIn: 'image',
+					allowIn: 'imageBlock',
 					allowContentOf: '$block',
 					isLimit: true
 				} );
@@ -2832,11 +3669,11 @@ describe( 'Schema', () => {
 				new Element( 'blockQuote', null, [
 					new Element( 'paragraph', null, 'foo' ),
 					new Element( 'listItem', { listType: 'x', listIndent: 0 }, 'foo' ),
-					new Element( 'image', null, [
+					new Element( 'imageBlock', null, [
 						new Element( 'caption', null, 'foo' )
 					] )
 				] ),
-				new Element( 'image', null, [
+				new Element( 'imageBlock', null, [
 					new Element( 'caption', null, 'foo' )
 				] )
 			] );
@@ -2885,7 +3722,7 @@ describe( 'Schema', () => {
 		} );
 
 		it( 'passes $root>blockQuote>image', () => {
-			expect( schema.checkChild( r1bQ, 'image' ) ).to.be.true;
+			expect( schema.checkChild( r1bQ, 'imageBlock' ) ).to.be.true;
 		} );
 
 		it( 'passes $root>blockQuote>image>caption', () => {
@@ -2897,7 +3734,7 @@ describe( 'Schema', () => {
 		} );
 
 		it( 'passes $root>image', () => {
-			expect( schema.checkChild( root1, 'image' ) ).to.be.true;
+			expect( schema.checkChild( root1, 'imageBlock' ) ).to.be.true;
 		} );
 
 		it( 'passes $root>image>caption', () => {
@@ -2942,7 +3779,7 @@ describe( 'Schema', () => {
 		} );
 
 		it( 'rejects $root>paragraph>image', () => {
-			expect( schema.checkChild( r1p1, 'image' ) ).to.be.false;
+			expect( schema.checkChild( r1p1, 'imageBlock' ) ).to.be.false;
 		} );
 
 		it( 'rejects $root>paragraph>caption', () => {
@@ -2954,7 +3791,7 @@ describe( 'Schema', () => {
 		} );
 
 		it( 'rejects $root>blockQuote>caption', () => {
-			expect( schema.checkChild( r1p1, 'image' ) ).to.be.false;
+			expect( schema.checkChild( r1p1, 'imageBlock' ) ).to.be.false;
 		} );
 
 		it( 'rejects $root>blockQuote>$text', () => {
@@ -3085,10 +3922,10 @@ describe( 'Schema', () => {
 		} );
 
 		it( 'image is block object', () => {
-			expect( schema.isLimit( 'image' ) ).to.be.true;
-			expect( schema.isBlock( 'image' ) ).to.be.true;
-			expect( schema.isObject( 'image' ) ).to.be.true;
-			expect( schema.isInline( 'image' ) ).to.be.false;
+			expect( schema.isLimit( 'imageBlock' ) ).to.be.true;
+			expect( schema.isBlock( 'imageBlock' ) ).to.be.true;
+			expect( schema.isObject( 'imageBlock' ) ).to.be.true;
+			expect( schema.isInline( 'imageBlock' ) ).to.be.false;
 		} );
 
 		it( 'caption is limit', () => {
@@ -3233,33 +4070,32 @@ describe( 'SchemaContext', () => {
 			expect( ctx ).to.equal( previousCtx );
 		} );
 
-		it( 'filters out DocumentFragment when it is a first item of context - array', () => {
+		it( 'creates context in DocumentFragment - array with string', () => {
 			const ctx = new SchemaContext( [ new DocumentFragment(), 'paragraph' ] );
 
-			expect( ctx.length ).to.equal( 1 );
-			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ 'paragraph' ] );
+			expect( ctx.length ).to.equal( 2 );
+			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ '$documentFragment', 'paragraph' ] );
 		} );
 
-		it( 'filters out DocumentFragment when it is a first item of context - element', () => {
+		it( 'creates context in DocumentFragment - element', () => {
 			const p = new Element( 'paragraph' );
 			const docFrag = new DocumentFragment();
 			docFrag._appendChild( p );
 
 			const ctx = new SchemaContext( p );
 
-			expect( ctx.length ).to.equal( 1 );
-			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ 'paragraph' ] );
+			expect( ctx.length ).to.equal( 2 );
+			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ '$documentFragment', 'paragraph' ] );
 		} );
 
-		it( 'filters out DocumentFragment when it is a first item of context - position', () => {
+		it( 'creates context in DocumentFragment - position', () => {
 			const p = new Element( 'paragraph' );
-			const docFrag = new DocumentFragment();
-			docFrag._appendChild( p );
+			const docFrag = new DocumentFragment( p );
+			const pos = Position._createAt( docFrag.getChild( 0 ), 0 );
+			const ctx = new SchemaContext( pos );
 
-			const ctx = new SchemaContext( new Position( docFrag, [ 0, 0 ] ) );
-
-			expect( ctx.length ).to.equal( 1 );
-			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ 'paragraph' ] );
+			expect( ctx.length ).to.equal( 2 );
+			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ '$documentFragment', 'paragraph' ] );
 		} );
 	} );
 
@@ -3337,6 +4173,19 @@ describe( 'SchemaContext', () => {
 			expect( newCtx ).to.instanceof( SchemaContext );
 			expect( newCtx ).to.not.equal( ctx );
 			expect( Array.from( newCtx.getNames() ) ).to.deep.equal( [ 'a', 'b', 'c', 'd' ] );
+			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ 'a', 'b', 'c' ] );
+		} );
+	} );
+
+	describe( 'trimLast()', () => {
+		it( 'creates new SchemaContext instance without the last item - #string', () => {
+			const ctx = new SchemaContext( [ 'a', 'b', 'c' ] );
+
+			const newCtx = ctx.trimLast();
+
+			expect( newCtx ).to.instanceof( SchemaContext );
+			expect( newCtx ).to.not.equal( ctx );
+			expect( Array.from( newCtx.getNames() ) ).to.deep.equal( [ 'a', 'b' ] );
 			expect( Array.from( ctx.getNames() ) ).to.deep.equal( [ 'a', 'b', 'c' ] );
 		} );
 	} );

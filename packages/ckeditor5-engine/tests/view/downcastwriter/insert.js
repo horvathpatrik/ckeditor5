@@ -1,21 +1,21 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import DowncastWriter from '../../../src/view/downcastwriter';
-import ContainerElement from '../../../src/view/containerelement';
-import Element from '../../../src/view/element';
-import EmptyElement from '../../../src/view/emptyelement';
-import UIElement from '../../../src/view/uielement';
-import RawElement from '../../../src/view/rawelement';
-import Position from '../../../src/view/position';
+import DowncastWriter from '../../../src/view/downcastwriter.js';
+import ContainerElement from '../../../src/view/containerelement.js';
+import Element from '../../../src/view/element.js';
+import EmptyElement from '../../../src/view/emptyelement.js';
+import UIElement from '../../../src/view/uielement.js';
+import RawElement from '../../../src/view/rawelement.js';
+import Position from '../../../src/view/position.js';
 
-import { stringify, parse } from '../../../src/dev-utils/view';
-import AttributeElement from '../../../src/view/attributeelement';
-import Document from '../../../src/view/document';
-import { expectToThrowCKEditorError } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
-import { StylesProcessor } from '../../../src/view/stylesmap';
+import { stringify, parse } from '../../../src/dev-utils/view.js';
+import AttributeElement from '../../../src/view/attributeelement.js';
+import Document from '../../../src/view/document.js';
+import { expectToThrowCKEditorError } from '@ckeditor/ckeditor5-utils/tests/_utils/utils.js';
+import { StylesProcessor } from '../../../src/view/stylesmap.js';
 
 describe( 'DowncastWriter', () => {
 	describe( 'insert()', () => {
@@ -153,6 +153,51 @@ describe( 'DowncastWriter', () => {
 				'நி{}க்கு',
 				[ 'லை' ],
 				'நி{லை}க்கு'
+			);
+		} );
+
+		it( 'should not break attribute on UIElement insertion', () => {
+			testInsert(
+				'<container:p><attribute:b view-priority="1">foo{}bar</attribute:b></container:p>',
+				[ '<ui:span></ui:span>' ],
+				'<container:p><attribute:b view-priority="1">foo[<ui:span></ui:span>]bar</attribute:b></container:p>'
+			);
+		} );
+
+		it( 'should break attribute on multiple different nodes insertion', () => {
+			testInsert(
+				'<container:p><attribute:b view-priority="1">foo{}bar</attribute:b></container:p>',
+				[ '<ui:span></ui:span>', 'baz' ],
+				'<container:p>' +
+					'<attribute:b view-priority="1">foo[<ui:span></ui:span></attribute:b>baz]' +
+					'<attribute:b view-priority="1">bar</attribute:b>' +
+				'</container:p>'
+			);
+		} );
+
+		it( 'should not break attribute on inline ContainerElement insertion and wrapped with an attribute', () => {
+			const { view, selection } = parse(
+				'<container:p><attribute:b view-priority="1">foo{}bar</attribute:b></container:p>'
+			);
+
+			const element = new ContainerElement( document, 'span', {}, 'baz' );
+			const newRange = writer.insert( selection.getFirstPosition(), element );
+
+			expect( stringify( view.root, newRange, { showType: true, showPriority: true } ) ).to.equal(
+				'<container:p>' +
+					'<attribute:b view-priority="1">foo</attribute:b>' +
+					'[<container:span>baz</container:span>]' +
+					'<attribute:b view-priority="1">bar</attribute:b>' +
+				'</container:p>'
+			);
+
+			const attribute = new AttributeElement( document, 'b' );
+			attribute._priority = 1;
+
+			const finalRange = writer.wrap( newRange, attribute );
+
+			expect( stringify( view.root, finalRange, { showType: true, showPriority: true } ) ).to.equal(
+				'<container:p><attribute:b view-priority="1">foo[<container:span>baz</container:span>]bar</attribute:b></container:p>'
 			);
 		} );
 

@@ -1,11 +1,11 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* globals ClassicEditor, console, window, document */
 
-import { CS_CONFIG } from '@ckeditor/ckeditor5-cloud-services/tests/_utils/cloud-services-config';
+import { CS_CONFIG } from '@ckeditor/ckeditor5-cloud-services/tests/_utils/cloud-services-config.js';
 
 /**
  * Plugin that converts custom attributes for elements that are wrapped in <figure> in the view.
@@ -28,13 +28,15 @@ class CustomFigureAttributes {
 		const editor = this.editor;
 
 		// Define on which elements the CSS classes should be preserved:
-		setupCustomClassConversion( 'img', 'image', editor );
+		setupCustomClassConversion( 'img', 'imageBlock', editor );
+		setupCustomClassConversion( 'img', 'imageInline', editor );
 		setupCustomClassConversion( 'table', 'table', editor );
 
 		editor.conversion.for( 'upcast' ).add( upcastCustomClasses( 'figure' ), { priority: 'low' } );
 
 		// Define custom attributes that should be preserved.
-		setupCustomAttributeConversion( 'img', 'image', 'id', editor );
+		setupCustomAttributeConversion( 'img', 'imageBlock', 'id', editor );
+		setupCustomAttributeConversion( 'img', 'imageInline', 'id', editor );
 		setupCustomAttributeConversion( 'table', 'table', 'id', editor );
 	}
 }
@@ -174,8 +176,10 @@ ClassicEditor
 	.create( document.querySelector( '#snippet-custom-figure-attributes' ), {
 		cloudServices: CS_CONFIG,
 		extraPlugins: [ CustomFigureAttributes ],
-		toolbar: {
-			viewportTopOffset: window.getViewportTopOffsetConfig()
+		ui: {
+			viewportOffset: {
+				top: window.getViewportTopOffsetConfig()
+			}
 		}
 	} )
 	.then( editor => {

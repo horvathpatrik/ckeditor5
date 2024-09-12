@@ -1,20 +1,20 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
+import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor.js';
+import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
 
-import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 
-import { assertTableStyle, modelTable, setTableWithObjectAttributes } from '../../_utils/utils';
-import TablePropertiesEditing from '../../../src/tableproperties/tablepropertiesediting';
-import TableBorderWidthCommand from '../../../src/tableproperties/commands/tableborderwidthcommand';
+import { assertTableStyle, modelTable, setTableWithObjectAttributes } from '../../_utils/utils.js';
+import TablePropertiesEditing from '../../../src/tableproperties/tablepropertiesediting.js';
+import TableBorderWidthCommand from '../../../src/tableproperties/commands/tableborderwidthcommand.js';
 
 describe( 'table properties', () => {
 	describe( 'commands', () => {
-		describe( 'TableBorderWidthCommand', () => {
+		describe( 'TableBorderWidthCommand: empty default value', () => {
 			let editor, model, command;
 
 			beforeEach( async () => {
@@ -23,7 +23,7 @@ describe( 'table properties', () => {
 				} );
 
 				model = editor.model;
-				command = new TableBorderWidthCommand( editor );
+				command = new TableBorderWidthCommand( editor, '' );
 			} );
 
 			afterEach( () => {
@@ -49,8 +49,13 @@ describe( 'table properties', () => {
 						expect( command.isEnabled ).to.be.false;
 					} );
 
-					it( 'should be true is selection has table', () => {
+					it( 'should be true is selection is in table', () => {
 						setData( model, modelTable( [ [ 'f[o]o' ] ] ) );
+						expect( command.isEnabled ).to.be.true;
+					} );
+
+					it( 'should be true is selection is over table', () => {
+						setData( model, '[' + modelTable( [ [ 'foo' ] ] ) + ']' );
 						expect( command.isEnabled ).to.be.true;
 					} );
 				} );
@@ -65,14 +70,14 @@ describe( 'table properties', () => {
 					} );
 
 					it( 'should be set if selected table has borderWidth property (single string)', () => {
-						setData( model, modelTable( [ [ '[]foo' ] ], { borderWidth: '2em' } ) );
+						setData( model, modelTable( [ [ '[]foo' ] ], { tableBorderWidth: '2em' } ) );
 
 						expect( command.value ).to.equal( '2em' );
 					} );
 
 					it( 'should be set if selected table has borderWidth property object with same values', () => {
 						setTableWithObjectAttributes( model, {
-							borderWidth: {
+							tableBorderWidth: {
 								top: '2em',
 								right: '2em',
 								bottom: '2em',
@@ -84,7 +89,7 @@ describe( 'table properties', () => {
 
 					it( 'should be undefined if selected table has borderWidth property object with different values', () => {
 						setTableWithObjectAttributes( model, {
-							borderWidth: {
+							tableBorderWidth: {
 								top: '2em',
 								right: '333px',
 								bottom: '2em',
@@ -97,14 +102,20 @@ describe( 'table properties', () => {
 				} );
 
 				describe( 'non-collapsed selection', () => {
-					it( 'should be false if selection does not have table', () => {
+					it( 'should be undefined if selection does not have table', () => {
 						setData( model, '<paragraph>f[oo]</paragraph>' );
 
 						expect( command.value ).to.be.undefined;
 					} );
 
-					it( 'should be true is selection has table', () => {
-						setData( model, modelTable( [ [ 'f[o]o' ] ], { borderWidth: '2em' } ) );
+					it( 'should be set if selection is in table', () => {
+						setData( model, modelTable( [ [ 'f[o]o' ] ], { tableBorderWidth: '2em' } ) );
+
+						expect( command.value ).to.equal( '2em' );
+					} );
+
+					it( 'should be set if selection is over table', () => {
+						setData( model, '[' + modelTable( [ [ 'foo' ] ], { tableBorderWidth: '2em' } ) + ']' );
 
 						expect( command.value ).to.equal( '2em' );
 					} );
@@ -126,7 +137,7 @@ describe( 'table properties', () => {
 
 					command.execute( { value: 25 } );
 
-					assertTableStyle( editor, 'border-bottom:25px;border-left:25px;border-right:25px;border-top:25px;' );
+					assertTableStyle( editor, 'border-width:25px;' );
 				} );
 
 				it( 'should add default unit for numeric values (string passed)', () => {
@@ -134,7 +145,7 @@ describe( 'table properties', () => {
 
 					command.execute( { value: 25 } );
 
-					assertTableStyle( editor, 'border-bottom:25px;border-left:25px;border-right:25px;border-top:25px;' );
+					assertTableStyle( editor, 'border-width:25px;' );
 				} );
 
 				it( 'should not add default unit for numeric values with unit', () => {
@@ -142,7 +153,7 @@ describe( 'table properties', () => {
 
 					command.execute( { value: '25pt' } );
 
-					assertTableStyle( editor, 'border-bottom:25pt;border-left:25pt;border-right:25pt;border-top:25pt;' );
+					assertTableStyle( editor, 'border-width:25pt;' );
 				} );
 
 				it( 'should add default unit to floats (number passed)', () => {
@@ -150,7 +161,7 @@ describe( 'table properties', () => {
 
 					command.execute( { value: 25.1 } );
 
-					assertTableStyle( editor, 'border-bottom:25.1px;border-left:25.1px;border-right:25.1px;border-top:25.1px;' );
+					assertTableStyle( editor, 'border-width:25.1px;' );
 				} );
 
 				it( 'should add default unit to floats (string passed)', () => {
@@ -158,7 +169,7 @@ describe( 'table properties', () => {
 
 					command.execute( { value: '0.1' } );
 
-					assertTableStyle( editor, 'border-bottom:0.1px;border-left:0.1px;border-right:0.1px;border-top:0.1px;' );
+					assertTableStyle( editor, 'border-width:0.1px;' );
 				} );
 
 				it( 'should pass invalid values', () => {
@@ -166,7 +177,7 @@ describe( 'table properties', () => {
 
 					command.execute( { value: 'bar' } );
 
-					assertTableStyle( editor, 'border-bottom:bar;border-left:bar;border-right:bar;border-top:bar;' );
+					assertTableStyle( editor, 'border-width:bar;' );
 				} );
 
 				it( 'should pass invalid value (string passed, CSS float without leading 0)', () => {
@@ -174,7 +185,7 @@ describe( 'table properties', () => {
 
 					command.execute( { value: '.2' } );
 
-					assertTableStyle( editor, 'border-bottom:.2;border-left:.2;border-right:.2;border-top:.2;' );
+					assertTableStyle( editor, 'border-width:.2;' );
 				} );
 
 				describe( 'collapsed selection', () => {
@@ -183,19 +194,19 @@ describe( 'table properties', () => {
 
 						command.execute( { value: '1px' } );
 
-						assertTableStyle( editor, 'border-bottom:1px;border-left:1px;border-right:1px;border-top:1px;' );
+						assertTableStyle( editor, 'border-width:1px;' );
 					} );
 
 					it( 'should change selected table borderWidth to a passed value', () => {
-						setData( model, modelTable( [ [ '[]foo' ] ], { borderWidth: '2em' } ) );
+						setData( model, modelTable( [ [ '[]foo' ] ], { tableBorderWidth: '2em' } ) );
 
 						command.execute( { value: '1px' } );
 
-						assertTableStyle( editor, 'border-bottom:1px;border-left:1px;border-right:1px;border-top:1px;' );
+						assertTableStyle( editor, 'border-width:1px;' );
 					} );
 
 					it( 'should remove borderWidth from a selected table if no value is passed', () => {
-						setData( model, modelTable( [ [ '[]foo' ] ], { borderWidth: '2em' } ) );
+						setData( model, modelTable( [ [ '[]foo' ] ], { tableBorderWidth: '2em' } ) );
 
 						command.execute();
 
@@ -203,13 +214,13 @@ describe( 'table properties', () => {
 					} );
 				} );
 
-				describe( 'non-collapsed selection', () => {
+				describe( 'non-collapsed selection (inside table)', () => {
 					it( 'should set selected table borderWidth to a passed value', () => {
 						setData( model, modelTable( [ [ '[foo]' ] ] ) );
 
 						command.execute( { value: '1px' } );
 
-						assertTableStyle( editor, 'border-bottom:1px;border-left:1px;border-right:1px;border-top:1px;' );
+						assertTableStyle( editor, 'border-width:1px;' );
 					} );
 
 					it( 'should change selected table borderWidth to a passed value', () => {
@@ -217,13 +228,108 @@ describe( 'table properties', () => {
 
 						command.execute( { value: '1px' } );
 
-						assertTableStyle( editor, 'border-bottom:1px;border-left:1px;border-right:1px;border-top:1px;' );
+						assertTableStyle( editor, 'border-width:1px;' );
 					} );
 
 					it( 'should remove borderWidth from a selected table if no value is passed', () => {
 						setData( model, modelTable( [ [ '[foo]' ] ] ) );
 
 						command.execute();
+
+						assertTableStyle( editor, '' );
+					} );
+				} );
+
+				describe( 'non-collapsed selection (over table)', () => {
+					it( 'should set selected table borderWidth to a passed value', () => {
+						setData( model, '[' + modelTable( [ [ 'foo' ] ] ) + ']' );
+
+						command.execute( { value: '1px' } );
+
+						assertTableStyle( editor, 'border-width:1px;' );
+					} );
+
+					it( 'should change selected table borderWidth to a passed value', () => {
+						setData( model, '[' + modelTable( [ [ 'foo' ] ] ) + ']' );
+
+						command.execute( { value: '1px' } );
+
+						assertTableStyle( editor, 'border-width:1px;' );
+					} );
+
+					it( 'should remove borderWidth from a selected table if no value is passed', () => {
+						setData( model, '[' + modelTable( [ [ 'foo' ] ] ) + ']' );
+
+						command.execute();
+
+						assertTableStyle( editor, '' );
+					} );
+				} );
+			} );
+		} );
+
+		describe( 'TableBorderWidthCommand: non-empty default value', () => {
+			let editor, model, command;
+
+			beforeEach( async () => {
+				editor = await ModelTestEditor.create( {
+					plugins: [ Paragraph, TablePropertiesEditing ]
+				} );
+
+				model = editor.model;
+				command = new TableBorderWidthCommand( editor, '3px' );
+			} );
+
+			afterEach( () => {
+				return editor.destroy();
+			} );
+
+			describe( 'value', () => {
+				describe( 'collapsed selection', () => {
+					it( 'should be undefined if selected table has set the default value', () => {
+						setData( model, modelTable( [ [ '[]foo' ] ], { tableBorderWidth: '3px' } ) );
+
+						expect( command.value ).to.be.undefined;
+					} );
+
+					it( 'should be set if selected table has borderWidth property other than the default value', () => {
+						setData( model, modelTable( [ [ '[]foo' ] ], { tableBorderWidth: '1px' } ) );
+
+						expect( command.value ).to.equal( '1px' );
+					} );
+				} );
+
+				describe( 'non-collapsed selection', () => {
+					it( 'should be undefined if selected table has set the default value', () => {
+						setData( model, modelTable( [ [ 'f[o]o' ] ], { tableBorderWidth: '3px' } ) );
+
+						expect( command.value ).to.be.undefined;
+					} );
+
+					it( 'should be set if selected table has borderWidth property other than the default value', () => {
+						setData( model, modelTable( [ [ 'f[o]o' ] ], { tableBorderWidth: '1px' } ) );
+
+						expect( command.value ).to.equal( '1px' );
+					} );
+				} );
+			} );
+
+			describe( 'execute()', () => {
+				describe( 'collapsed selection', () => {
+					it( 'should remove borderWidth from a selected table if passed the default value', () => {
+						setData( model, modelTable( [ [ '[]foo' ] ], { tableBorderWidth: '1px' } ) );
+
+						command.execute( { value: '3px' } );
+
+						assertTableStyle( editor, '' );
+					} );
+				} );
+
+				describe( 'non-collapsed selection', () => {
+					it( 'should remove borderWidth from a selected table if passed the default value', () => {
+						setData( model, modelTable( [ [ '[foo]' ] ], { tableBorderWidth: '1px' } ) );
+
+						command.execute( { value: '3px' } );
 
 						assertTableStyle( editor, '' );
 					} );

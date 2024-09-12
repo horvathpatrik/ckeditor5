@@ -1,18 +1,18 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import CodeBlockEditing from '../src/codeblockediting';
-import CodeBlockCommand from '../src/codeblockcommand';
+import CodeBlockEditing from '../src/codeblockediting.js';
+import CodeBlockCommand from '../src/codeblockcommand.js';
 
-import AlignmentEditing from '@ckeditor/ckeditor5-alignment/src/alignmentediting';
-import BoldEditing from '@ckeditor/ckeditor5-basic-styles/src/bold/boldediting';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
-import BlockQuoteEditing from '@ckeditor/ckeditor5-block-quote/src/blockquoteediting';
+import AlignmentEditing from '@ckeditor/ckeditor5-alignment/src/alignmentediting.js';
+import BoldEditing from '@ckeditor/ckeditor5-basic-styles/src/bold/boldediting.js';
+import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import BlockQuoteEditing from '@ckeditor/ckeditor5-block-quote/src/blockquoteediting.js';
 
-import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import { getData as getModelData, setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor.js';
+import { getData as getModelData, setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 
 describe( 'CodeBlockCommand', () => {
 	let editor, model, command;
@@ -249,6 +249,80 @@ describe( 'CodeBlockCommand', () => {
 			command.execute( { language: 'css', forceValue: true } );
 
 			expect( getModelData( model ) ).to.equal( '<codeBlock language="css">f[o]o</codeBlock>' );
+		} );
+
+		it( 'should remove all non-allowed nodes when inserting the "codeBlock" element', () => {
+			model.schema.register( 'div', { inheritAllFrom: '$block', allowIn: 'paragraph' } );
+			editor.conversion.elementToElement( { model: 'div', view: 'div' } );
+
+			setModelData( model, '[<paragraph>Foo<div></div>Bar</paragraph>]' );
+
+			command.execute();
+
+			expect( getModelData( model ) ).to.equal(
+				'<codeBlock language="plaintext">[FooBar]</codeBlock>'
+			);
+		} );
+
+		it( 'should remove all non-allowed nodes when inserting the "codeBlock" element (the softBreak check)', () => {
+			model.schema.register( 'div', { inheritAllFrom: '$block', allowIn: 'paragraph' } );
+			editor.conversion.elementToElement( { model: 'div', view: 'div' } );
+
+			setModelData( model, '[<paragraph>Foo<div></div>Bar<softBreak></softBreak>Baz</paragraph>]' );
+
+			command.execute();
+
+			expect( getModelData( model ) ).to.equal(
+				'<codeBlock language="plaintext">[FooBar<softBreak></softBreak>Baz]</codeBlock>'
+			);
+		} );
+
+		describe( 'options.usePreviousLanguageChoice=true', () => {
+			it( 'it should remember the selected language', () => {
+				setModelData( model, '<paragraph>fo[]o</paragraph>' );
+
+				command.execute( { language: 'php' } );
+
+				expect( command._lastLanguage ).to.equal( 'php' );
+			} );
+
+			it( 'it should apply the previous language if specified', () => {
+				setModelData( model, '<paragraph>fo[]o</paragraph>' );
+
+				command._lastLanguage = 'css';
+
+				command.execute( { usePreviousLanguageChoice: true } );
+
+				expect( getModelData( model ) ).to.equal( '<codeBlock language="css">fo[]o</codeBlock>' );
+			} );
+
+			it( 'it should not apply the previous language if specified but usePreviousLanguageChoice=false', () => {
+				setModelData( model, '<paragraph>fo[]o</paragraph>' );
+
+				command._lastLanguage = 'css';
+
+				command.execute();
+
+				expect( getModelData( model ) ).to.equal( '<codeBlock language="plaintext">fo[]o</codeBlock>' );
+			} );
+
+			it( 'it should apply the default language when the last language is not set yet', () => {
+				setModelData( model, '<paragraph>fo[]o</paragraph>' );
+
+				command.execute( { usePreviousLanguageChoice: true } );
+
+				expect( getModelData( model ) ).to.equal( '<codeBlock language="plaintext">fo[]o</codeBlock>' );
+			} );
+
+			it( 'it should prioritize using language passed as an option over previous language', () => {
+				setModelData( model, '<paragraph>fo[]o</paragraph>' );
+
+				command._lastLanguage = 'css';
+
+				command.execute( { language: 'php', usePreviousLanguageChoice: true } );
+
+				expect( getModelData( model ) ).to.equal( '<codeBlock language="php">fo[]o</codeBlock>' );
+			} );
 		} );
 	} );
 

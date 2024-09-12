@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* globals console:false, document, window */
 
-import InlineEditor from '../../src/inlineeditor';
-import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset';
+import InlineEditor from '../../src/inlineeditor.js';
+import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
 
 window.editors = [];
 const container = document.querySelector( '.container' );
@@ -15,6 +15,7 @@ let counter = 1;
 function initEditor() {
 	InlineEditor
 		.create( `<h2>Editor ${ counter }</h2><p>This is an editor instance.</p>`, {
+			image: { toolbar: [ 'toggleImageCaption', 'imageTextAlternative' ] },
 			plugins: [ ArticlePluginSet ],
 			toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bulletedList', 'numberedList', 'blockQuote', 'undo', 'redo' ]
 		} )

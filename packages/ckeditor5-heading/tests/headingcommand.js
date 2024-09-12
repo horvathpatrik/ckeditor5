@@ -1,12 +1,12 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import ParagraphCommand from '@ckeditor/ckeditor5-paragraph/src/paragraphcommand';
-import HeadingCommand from '../src/headingcommand';
-import { setData, getData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor.js';
+import ParagraphCommand from '@ckeditor/ckeditor5-paragraph/src/paragraphcommand.js';
+import HeadingCommand from '../src/headingcommand.js';
+import { setData, getData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 
 const options = [
 	{ model: 'heading1', view: { name: 'h2' }, title: 'H2' },
@@ -139,7 +139,7 @@ describe( 'HeadingCommand', () => {
 		} );
 
 		it( 'should not rename blocks which cannot become headings (block is an object)', () => {
-			schema.register( 'image', {
+			schema.register( 'imageBlock', {
 				isBlock: true,
 				isObject: true,
 				allowIn: '$root'
@@ -148,7 +148,7 @@ describe( 'HeadingCommand', () => {
 			setData(
 				model,
 				'<paragraph>a[bc</paragraph>' +
-				'<image></image>' +
+				'<imageBlock></imageBlock>' +
 				'<paragraph>de]f</paragraph>'
 			);
 
@@ -156,7 +156,7 @@ describe( 'HeadingCommand', () => {
 
 			expect( getData( model ) ).to.equal(
 				'<heading1>a[bc</heading1>' +
-				'<image></image>' +
+				'<imageBlock></imageBlock>' +
 				'<heading1>de]f</heading1>'
 			);
 		} );
@@ -225,12 +225,12 @@ describe( 'HeadingCommand', () => {
 			}
 
 			it( 'converts all elements where selection is applied', () => {
-				setData( model, '<heading1>foo[</heading1><heading2>bar</heading2><heading3>baz]</heading3>' );
+				setData( model, '<heading1>fo[o</heading1><heading2>bar</heading2><heading3>baz]</heading3>' );
 
 				command.execute( { value: 'heading3' } );
 
 				expect( getData( model ) ).to.equal(
-					'<heading3>foo[</heading3><heading3>bar</heading3><heading3>baz]</heading3>'
+					'<heading3>fo[o</heading3><heading3>bar</heading3><heading3>baz]</heading3>'
 				);
 			} );
 

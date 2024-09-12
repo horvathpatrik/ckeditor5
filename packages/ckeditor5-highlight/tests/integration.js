@@ -1,22 +1,22 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* global document */
 
-import Highlight from '../src/highlight';
-import BlockQuote from '@ckeditor/ckeditor5-block-quote/src/blockquote';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
-import Heading from '@ckeditor/ckeditor5-heading/src/heading';
-import Image from '@ckeditor/ckeditor5-image/src/image';
-import ImageCaption from '@ckeditor/ckeditor5-image/src/imagecaption';
-import List from '@ckeditor/ckeditor5-list/src/list';
-import Enter from '@ckeditor/ckeditor5-enter/src/enter';
-import Delete from '@ckeditor/ckeditor5-typing/src/delete';
+import Highlight from '../src/highlight.js';
+import BlockQuote from '@ckeditor/ckeditor5-block-quote/src/blockquote.js';
+import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import Heading from '@ckeditor/ckeditor5-heading/src/heading.js';
+import Image from '@ckeditor/ckeditor5-image/src/image.js';
+import ImageCaption from '@ckeditor/ckeditor5-image/src/imagecaption.js';
+import List from '@ckeditor/ckeditor5-list/src/list.js';
+import Enter from '@ckeditor/ckeditor5-enter/src/enter.js';
+import Delete from '@ckeditor/ckeditor5-typing/src/delete.js';
 
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor';
-import { getData as getModelData, setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import { getData as getModelData, setData as setModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 
 describe( 'Highlight', () => {
 	let editor, model, element;
@@ -43,27 +43,29 @@ describe( 'Highlight', () => {
 
 	describe( 'compatibility with images', () => {
 		it( 'does work inside image caption', () => {
-			setModelData( model, '<image src="/assets/sample.png"><caption>foo[bar]baz</caption></image>' );
+			setModelData( model, '<imageBlock src="/assets/sample.png"><caption>foo[bar]baz</caption></imageBlock>' );
 
 			editor.execute( 'highlight', { value: 'yellowMarker' } );
 
 			expect( getModelData( model ) )
-				.to.equal(
-					'<image src="/assets/sample.png"><caption>foo[<$text highlight="yellowMarker">bar</$text>]baz</caption></image>'
-				);
+				.to.equal( '<imageBlock src="/assets/sample.png">' +
+					'<caption>foo[<$text highlight="yellowMarker">bar</$text>]baz</caption>' +
+				'</imageBlock>' );
 		} );
 
 		it( 'does work on selection with image', () => {
 			setModelData(
 				model,
-				'<paragraph>foo[foo</paragraph><image src="/assets/sample.png"><caption>abc</caption></image><paragraph>bar]bar</paragraph>'
+				'<paragraph>foo[foo</paragraph>' +
+					'<imageBlock src="/assets/sample.png"><caption>abc</caption></imageBlock>' +
+				'<paragraph>bar]bar</paragraph>'
 			);
 
 			editor.execute( 'highlight', { value: 'yellowMarker' } );
 
 			expect( getModelData( model ) ).to.equal(
 				'<paragraph>foo[<$text highlight="yellowMarker">foo</$text></paragraph>' +
-				'<image src="/assets/sample.png"><caption><$text highlight="yellowMarker">abc</$text></caption></image>' +
+				'<imageBlock src="/assets/sample.png"><caption><$text highlight="yellowMarker">abc</$text></caption></imageBlock>' +
 				'<paragraph><$text highlight="yellowMarker">bar</$text>]bar</paragraph>'
 			);
 		} );

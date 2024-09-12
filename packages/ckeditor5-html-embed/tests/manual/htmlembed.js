@@ -1,5 +1,5 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
@@ -7,10 +7,12 @@
 
 import sanitizeHtml from 'sanitize-html';
 import { clone } from 'lodash-es';
-import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor';
-import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset';
-import Code from '@ckeditor/ckeditor5-basic-styles/src/code';
-import HtmlEmbed from '../../src/htmlembed';
+import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor.js';
+import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
+import MediaEmbed from '@ckeditor/ckeditor5-media-embed/src/mediaembed.js';
+import Table from '@ckeditor/ckeditor5-table/src/table.js';
+import Code from '@ckeditor/ckeditor5-basic-styles/src/code.js';
+import HtmlEmbed from '../../src/htmlembed.js';
 
 const previewsModeButton = document.getElementById( 'raw-html-previews-enabled' );
 const noPreviewsModeButton = document.getElementById( 'raw-html-previews-disabled' );
@@ -73,14 +75,14 @@ async function reloadEditor( config = {} ) {
 
 	config = {
 		...config,
-		plugins: [ ArticlePluginSet, HtmlEmbed, Code ],
+		plugins: [ ArticlePluginSet, HtmlEmbed, Code, MediaEmbed, Table ],
 		toolbar: [
 			'heading', '|', 'bold', 'italic', 'link', '|',
 			'bulletedList', 'numberedList', 'blockQuote', 'insertTable', '|',
-			'undo', 'redo', '|', 'htmlEmbed'
+			'undo', 'redo', '|', 'htmlEmbed', 'mediaEmbed'
 		],
 		image: {
-			toolbar: [ 'imageStyle:full', 'imageStyle:side', '|', 'imageTextAlternative' ]
+			toolbar: [ 'imageStyle:block', 'imageStyle:wrapText', '|', 'imageTextAlternative' ]
 		}
 	};
 
@@ -99,10 +101,15 @@ function getSanitizeHtmlConfig( defaultConfig ) {
 		'video',
 		'picture',
 		'source',
-		'img'
+		'img',
+
+		// Allows embedding scripts.
+		'script'
 	);
 
 	config.selfClosing.push( 'source' );
+
+	config.allowVulnerableTags = true;
 
 	// Remove duplicates.
 	config.allowedTags = [ ...new Set( config.allowedTags ) ];

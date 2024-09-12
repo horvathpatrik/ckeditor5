@@ -1,18 +1,22 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* globals console */
 
-import VirtualTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor';
-import MediaEmbedEditing from '../src/mediaembedediting';
-import { setData as setModelData, getData as getModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
-import { getData as getViewData } from '@ckeditor/ckeditor5-engine/src/dev-utils/view';
-import normalizeHtml from '@ckeditor/ckeditor5-utils/tests/_utils/normalizehtml';
+import VirtualTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/virtualtesteditor.js';
+import MediaEmbedEditing from '../src/mediaembedediting.js';
+import { setData as setModelData, getData as getModelData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
+import { getData as getViewData } from '@ckeditor/ckeditor5-engine/src/dev-utils/view.js';
+import normalizeHtml from '@ckeditor/ckeditor5-utils/tests/_utils/normalizehtml.js';
+import testUtils from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
+import { escapeRegExp } from 'lodash-es';
 
 describe( 'MediaEmbedEditing', () => {
 	let editor, model, doc, view;
+
+	testUtils.createSinonSandbox();
 
 	const testProviders = {
 		A: {
@@ -143,7 +147,9 @@ describe( 'MediaEmbedEditing', () => {
 							testMediaUpcast( [
 								'https://www.dailymotion.com/video/foo',
 								'www.dailymotion.com/video/foo',
-								'dailymotion.com/video/foo'
+								'dailymotion.com/video/foo',
+								'https://dai.ly/foo',
+								'dai.ly/foo'
 							],
 							'<div style="position: relative; padding-bottom: 100%; height: 0; ">' +
 								'<iframe src="https://www.dailymotion.com/embed/video/foo" ' +
@@ -239,6 +245,18 @@ describe( 'MediaEmbedEditing', () => {
 							'</div>' );
 						} );
 
+						it( 'upcasts the URL that contains a timestamp', () => {
+							testMediaUpcast( [
+								'https://youtu.be/aEZw6KFTm6s?t=93'
+							],
+							'<div style="position: relative; padding-bottom: 100%; height: 0; padding-bottom: 56.2493%;">' +
+								'<iframe src="https://www.youtube.com/embed/aEZw6KFTm6s?start=93" ' +
+									'style="position: absolute; width: 100%; height: 100%; top: 0; left: 0;" ' +
+									'frameborder="0" allow="autoplay; encrypted-media" allowfullscreen="">' +
+								'</iframe>' +
+							'</div>' );
+						} );
+
 						it( 'upcasts the URL (vimeo)', () => {
 							testMediaUpcast( [
 								'https://www.vimeo.com/1234',
@@ -283,7 +301,11 @@ describe( 'MediaEmbedEditing', () => {
 							testMediaUpcast( [
 								'https://www.instagram.com/p/foo',
 								'www.instagram.com/p/foo',
-								'instagram.com/p/foo'
+								'instagram.com/p/foo',
+
+								'https://www.instagram.com/reel/Foo/',
+								'www.instagram.com/reel/Foo/',
+								'instagram.com/reel/Foo/'
 							] );
 						} );
 
@@ -291,7 +313,11 @@ describe( 'MediaEmbedEditing', () => {
 							testMediaUpcast( [
 								'https://www.twitter.com/foo/bar',
 								'www.twitter.com/foo/bar',
-								'twitter.com/foo/bar'
+								'twitter.com/foo/bar',
+
+								'https://www.x.com/foo/bar',
+								'www.x.com/foo/bar',
+								'x.com/foo/bar'
 							] );
 						} );
 
@@ -300,6 +326,22 @@ describe( 'MediaEmbedEditing', () => {
 								'https://www.google.com/maps/foo',
 								'www.google.com/maps/foo',
 								'google.com/maps/foo'
+							] );
+						} );
+
+						it( 'upcasts the URL (google maps short URL)', () => {
+							testMediaUpcast( [
+								'https://goo.gl/maps/foo',
+								'goo.gl/maps/foo'
+							] );
+						} );
+
+						it( 'upcasts the URL (google maps for Android)', () => {
+							testMediaUpcast( [
+								'https://maps.google.com',
+								'https://maps.app.goo.gl',
+								'maps.google.com',
+								'maps.app.goo.gl'
 							] );
 						} );
 
@@ -472,11 +514,227 @@ describe( 'MediaEmbedEditing', () => {
 
 					expect( model.schema.checkChild( [ '$root', 'media' ], 'media' ) ).to.be.false;
 					expect( model.schema.checkChild( [ '$root', 'media' ], '$text' ) ).to.be.false;
-					expect( model.schema.checkChild( [ '$root', '$block' ], 'image' ) ).to.be.false;
+					expect( model.schema.checkChild( [ '$root', '$block' ], 'imageBlock' ) ).to.be.false;
+				} );
+		} );
+
+		it( 'inherits attributes from $blockObject', () => {
+			return createTestEditor()
+				.then( newEditor => {
+					model = newEditor.model;
+
+					model.schema.extend( '$blockObject', {
+						allowAttributes: 'foo'
+					} );
+
+					expect( model.schema.checkAttribute( 'media', 'foo' ) ).to.be.true;
 				} );
 		} );
 
 		describe( 'conversion in the data pipeline', () => {
+			describe( 'elementName#o-embed', () => {
+				beforeEach( () => {
+					return createTestEditor( {
+						elementName: 'o-embed',
+						providers: providerDefinitions
+					} )
+						.then( newEditor => {
+							editor = newEditor;
+							model = editor.model;
+							doc = model.document;
+							view = editor.editing.view;
+						} );
+				} );
+
+				describe( 'model to view', () => {
+					it( 'should convert', () => {
+						setModelData( model, '<media url="https://ckeditor.com"></media>' );
+
+						expect( editor.getData() ).to.equal(
+							'<figure class="media">' +
+								'<o-embed url="https://ckeditor.com"></o-embed>' +
+							'</figure>' );
+					} );
+
+					it( 'should convert (no url)', () => {
+						setModelData( model, '<media></media>' );
+
+						expect( editor.getData() ).to.equal(
+							'<figure class="media">' +
+								'<o-embed></o-embed>' +
+							'</figure>' );
+					} );
+
+					it( 'should convert (preview-less media)', () => {
+						setModelData( model, '<media url="https://preview-less"></media>' );
+
+						expect( editor.getData() ).to.equal(
+							'<figure class="media">' +
+								'<o-embed url="https://preview-less"></o-embed>' +
+							'</figure>' );
+					} );
+				} );
+
+				describe( 'view to model', () => {
+					it( 'should convert media figure', () => {
+						editor.setData( '<figure class="media"><o-embed url="https://ckeditor.com"></o-embed></figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '<media url="https://ckeditor.com"></media>' );
+					} );
+
+					it( 'should not convert if there is no media class', () => {
+						editor.setData( '<figure class="quote">My quote</figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '' );
+					} );
+
+					it( 'should not convert if there is no o-embed wrapper inside #1', () => {
+						editor.setData( '<figure class="media"></figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '' );
+					} );
+
+					it( 'should not convert if there is no o-embed wrapper inside #2', () => {
+						editor.setData( '<figure class="media">test</figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '' );
+					} );
+
+					it( 'should not convert when the wrapper has no data-o-embed-url attribute', () => {
+						editor.setData( '<figure class="media"><div></div></figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '' );
+					} );
+
+					it( 'should not convert in the wrong context', () => {
+						model.schema.register( 'blockquote', { inheritAllFrom: '$block' } );
+						model.schema.addChildCheck( ( ctx, childDef ) => {
+							if ( ctx.endsWith( '$root' ) && childDef.name == 'media' ) {
+								return false;
+							}
+						} );
+
+						editor.conversion.elementToElement( { model: 'blockquote', view: 'blockquote' } );
+
+						editor.setData(
+							'<blockquote><figure class="media"><o-embed url="https://ckeditor.com"></o-embed></figure></blockquote>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '<blockquote></blockquote>' );
+					} );
+
+					it( 'should not convert if the o-embed wrapper is already consumed', () => {
+						editor.data.upcastDispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
+							const img = data.viewItem.getChild( 0 );
+							conversionApi.consumable.consume( img, { name: true } );
+						}, { priority: 'high' } );
+
+						editor.setData( '<figure class="media"><o-embed url="https://ckeditor.com"></o-embed></figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '' );
+					} );
+
+					it( 'should not consume if the media element was not converted', () => {
+						editor.data.upcastDispatcher.on( 'element:o-embed', ( evt, data, conversionApi ) => {
+							conversionApi.consumable.consume( data.viewItem, { name: true } );
+							data.modelRange = conversionApi.writer.createRange( data.modelCursor );
+						}, { priority: 'highest' } );
+
+						editor.data.upcastDispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
+							expect( conversionApi.consumable.test( data.viewItem, { name: true, classes: 'media' } ) ).to.be.true;
+						}, { priority: 'low' } );
+
+						editor.setData( '<figure class="media"><o-embed url="https://ckeditor.com"></o-embed></figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '' );
+					} );
+
+					it( 'should consume the figure element before the o-embed conversion starts', () => {
+						editor.data.upcastDispatcher.on( 'element:o-embed', ( evt, data, conversionApi ) => {
+							expect( conversionApi.consumable.test( data.viewItem.parent, { name: true, classes: 'media' } ) ).to.be.false;
+						}, { priority: 'low' } );
+
+						editor.setData( '<figure class="media"><o-embed url="https://ckeditor.com"></o-embed></figure>' );
+					} );
+
+					it( 'should not convert if the figure is already consumed', () => {
+						editor.data.upcastDispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
+							conversionApi.consumable.consume( data.viewItem, { name: true, class: 'media' } );
+						}, { priority: 'high' } );
+
+						editor.setData( '<figure class="media"><o-embed url="https://ckeditor.com"></o-embed></figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '' );
+					} );
+
+					it( 'should not left unconverted figure media element', () => {
+						editor.data.upcastDispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
+							expect( conversionApi.consumable.test( data.viewItem, { name: true, classes: 'media' } ) ).to.be.false;
+						}, { priority: 'low' } );
+
+						editor.setData( '<figure class="media"><o-embed url="https://ckeditor.com">foo bar</o-embed></figure>' );
+					} );
+
+					it( 'should discard the contents of the media', () => {
+						editor.setData( '<figure class="media"><o-embed url="https://ckeditor.com">foo bar</o-embed></figure>' );
+
+						expect( getModelData( model, { withoutSelection: true } ) )
+							.to.equal( '<media url="https://ckeditor.com"></media>' );
+					} );
+
+					it( 'should not convert unknown media', () => {
+						return createTestEditor( {
+							providers: [
+								testProviders.A
+							]
+						} )
+							.then( newEditor => {
+								newEditor.setData(
+									'<figure class="media">' +
+										'<div data-oembed-url="foo.com/123"></div>' +
+									'</figure>' +
+									'<figure class="media">' +
+										'<div data-oembed-url="unknown.media/123"></div>' +
+									'</figure>' );
+
+								expect( getModelData( newEditor.model, { withoutSelection: true } ) )
+									.to.equal( '<media url="foo.com/123"></media>' );
+
+								return newEditor.destroy();
+							} );
+					} );
+
+					it( 'should not consume media figure if media url is not matched with any provider url', () => {
+						return createTestEditor( {
+							providers: [
+								testProviders.A
+							]
+						} ).then( newEditor => {
+							let wasConsumed = false;
+
+							newEditor.data.upcastDispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
+								wasConsumed = !conversionApi.consumable.test( data.viewItem, { name: true } );
+							}, { priority: 'lowest' } );
+
+							newEditor.setData( '<figure class="media"><o-embed url="https://ckeditor.com"></o-embed></figure>' );
+
+							expect( getModelData( newEditor.model, { withoutSelection: true } ) ).to.equal( '' );
+							expect( wasConsumed ).to.be.false;
+
+							return newEditor.destroy();
+						} );
+					} );
+				} );
+			} );
+
 			describe( 'previewsInData=false', () => {
 				beforeEach( () => {
 					return createTestEditor( {
@@ -586,7 +844,7 @@ describe( 'MediaEmbedEditing', () => {
 
 					it( 'should not convert if the figure is already consumed', () => {
 						editor.data.upcastDispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
-							conversionApi.consumable.consume( data.viewItem, { name: true, class: 'image' } );
+							conversionApi.consumable.consume( data.viewItem, { name: true, class: 'media' } );
 						}, { priority: 'high' } );
 
 						editor.setData( '<figure class="media"><oembed url="https://ckeditor.com"></oembed></figure>' );
@@ -666,6 +924,31 @@ describe( 'MediaEmbedEditing', () => {
 								'<figure class="media">' +
 									'<oembed url="https://preview-less"></oembed>' +
 								'</figure>' );
+						} );
+
+						it( 'should output unfiltered data', () => {
+							const provider = {
+								name: 'test',
+								url: 'foo.com',
+								html: () => {
+									return '<div onclick="action()">foo</div>';
+								}
+							};
+
+							return createTestEditor( {
+								providers: [ provider ],
+								previewsInData: true
+							} )
+								.then( editor => {
+									setModelData( editor.model, '<media url="https://foo.com"></media>' );
+
+									expect( editor.getData() ).to.equal(
+										'<figure class="media">' +
+											'<div data-oembed-url="https://foo.com">' +
+												'<div onclick="action()">foo</div>' +
+											'</div>' +
+										'</figure>' );
+								} );
 						} );
 					} );
 
@@ -747,7 +1030,7 @@ describe( 'MediaEmbedEditing', () => {
 
 						it( 'should not convert if the figure is already consumed', () => {
 							editor.data.upcastDispatcher.on( 'element:figure', ( evt, data, conversionApi ) => {
-								conversionApi.consumable.consume( data.viewItem, { name: true, class: 'image' } );
+								conversionApi.consumable.consume( data.viewItem, { name: true, class: 'media' } );
 							}, { priority: 'high' } );
 
 							editor.setData( '<figure class="media"><div data-oembed-url="https://ckeditor.com"></div></figure>' );
@@ -826,6 +1109,40 @@ describe( 'MediaEmbedEditing', () => {
 				} );
 
 				test();
+			} );
+
+			it( 'should apply filtering to the output', () => {
+				testUtils.sinon.stub( console, 'warn' )
+					.withArgs( sinon.match( /^domconverter-unsafe-attribute-detected/ ) )
+					.callsFake( () => {} );
+
+				const provider = {
+					name: 'test',
+					url: 'foo.com',
+					html: () => {
+						return '<div onclick="action()">foo</div>';
+					}
+				};
+
+				return createTestEditor( {
+					providers: [
+						provider
+					]
+				} ).then( editor => {
+					editor.setData( '<figure class="media"><div data-oembed-url="foo.com"></div></figure>' );
+
+					expect( getViewData( editor.editing.view, {
+						withoutSelection: true,
+						renderRawElements: true,
+						domConverter: editor.editing.view.domConverter
+					} ) ).to.equal(
+						'<figure class="ck-widget media" contenteditable="false">' +
+							'<div class="ck-media__wrapper" data-oembed-url="https://foo.com">' +
+								'<div data-ck-unsafe-attribute-onclick="action()">foo</div>' +
+							'</div>' +
+						'</figure>'
+					);
+				} );
 			} );
 
 			function test() {
@@ -950,13 +1267,13 @@ describe( 'MediaEmbedEditing', () => {
 			const viewData = getViewData( view, { withoutSelection: true, renderRawElements: true } );
 			let expectedRegExp;
 
-			const expectedUrl = url.match( /^https?:\/\// ) ? url : 'https://' + url;
+			const expectedUrl = escapeRegExp( url.match( /^https?:\/\// ) ? url : 'https://' + url );
 
 			if ( expected ) {
 				expectedRegExp = new RegExp(
 					'<figure[^>]+>' +
 						'<div[^>]+>' +
-							normalizeHtml( expected ) +
+							normalizeHtml( escapeRegExp( expected ) ) +
 						'</div>' +
 					'</figure>' );
 			} else {
@@ -965,11 +1282,14 @@ describe( 'MediaEmbedEditing', () => {
 						'<div[^>]+>' +
 							'<div class="ck ck-media__placeholder ck-reset_all">' +
 								'<div class="ck-media__placeholder__icon">.*</div>' +
-								`<a class="ck-media__placeholder__url" href="${ expectedUrl }" rel="noopener noreferrer" target="_blank">` +
-									`<span class="ck-media__placeholder__url__text">${ expectedUrl }</span>` +
-									'<span class="ck ck-tooltip ck-tooltip_s">' +
-										'<span class="ck ck-tooltip__text">Open media in new tab</span>' +
-									'</span>' +
+								'<a ' +
+									'class="ck-media__placeholder__url" ' +
+									'data-cke-tooltip-text="Open media in new tab" ' +
+									`href="${ expectedUrl }" ` +
+									'rel="noopener noreferrer" ' +
+									'target="_blank"' +
+								'>' +
+										`<span class="ck-media__placeholder__url__text">${ expectedUrl }</span>` +
 								'</a>' +
 							'</div>' +
 						'</div>' +

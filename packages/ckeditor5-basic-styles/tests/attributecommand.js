@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import AttributeCommand from '../src/attributecommand';
+import AttributeCommand from '../src/attributecommand.js';
 
-import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
+import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor.js';
 
-import { setData, getData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import { setData, getData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 
 describe( 'AttributeCommand', () => {
 	const attrKey = 'bold';
@@ -271,7 +271,7 @@ describe( 'AttributeCommand', () => {
 		} );
 
 		it( 'should not apply attribute change where it would invalid schema', () => {
-			model.schema.register( 'image', { inheritAllFrom: '$block' } );
+			model.schema.register( 'imageBlock', { inheritAllFrom: '$block' } );
 			setData( model, '<p>ab[c<img></img><$text bold="true">foobar</$text>xy<img></img>]z</p>' );
 
 			expect( command.isEnabled ).to.be.true;

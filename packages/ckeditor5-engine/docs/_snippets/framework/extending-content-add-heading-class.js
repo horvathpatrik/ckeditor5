@@ -1,11 +1,11 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
- * For licensing, see LICENSE.md.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
+ * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* globals ClassicEditor, console, window, document */
 
-import { CS_CONFIG } from '@ckeditor/ckeditor5-cloud-services/tests/_utils/cloud-services-config';
+import { CS_CONFIG } from '@ckeditor/ckeditor5-cloud-services/tests/_utils/cloud-services-config.js';
 
 function AddClassToAllHeading1( editor ) {
 	editor.conversion.for( 'downcast' ).add( dispatcher => {
@@ -21,8 +21,10 @@ ClassicEditor
 	.create( document.querySelector( '#snippet-heading-class' ), {
 		cloudServices: CS_CONFIG,
 		extraPlugins: [ AddClassToAllHeading1 ],
-		toolbar: {
-			viewportTopOffset: window.getViewportTopOffsetConfig()
+		ui: {
+			viewportOffset: {
+				top: window.getViewportTopOffsetConfig()
+			}
 		}
 	} )
 	.then( editor => {

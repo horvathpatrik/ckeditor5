@@ -1,11 +1,13 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import WidgetResize from '../../../src/widgetresize';
+/* global setTimeout */
 
-import Rect from '@ckeditor/ckeditor5-utils/src/dom/rect';
+import WidgetResize from '../../../src/widgetresize.js';
+
+import Rect from '@ckeditor/ckeditor5-utils/src/dom/rect.js';
 
 export const resizerMouseSimulator = {
 	down( editor, domTarget, options = {} ) {
@@ -151,7 +153,16 @@ export function getHandleCenterPoint( domWrapper, handlePosition ) {
 	return returnValue;
 }
 
-export function focusEditor( editor ) {
+export async function focusEditor( editor ) {
 	editor.editing.view.focus();
 	editor.ui.focusTracker.isFocused = true;
+
+	// It may take some time for DOM to react in Chrome, especially if the focus is somewhere else
+	// like in dev tools or the window is blurred. Let's give it that time before proceeding any further.
+	// See https://github.com/ckeditor/ckeditor5/issues/8571.
+	return new Promise( resolve => {
+		setTimeout( () => {
+			resolve();
+		}, 50 );
+	} );
 }

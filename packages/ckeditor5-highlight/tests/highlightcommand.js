@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import HighlightCommand from './../src/highlightcommand';
+import HighlightCommand from './../src/highlightcommand.js';
 
-import Command from '@ckeditor/ckeditor5-core/src/command';
-import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor';
-import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import Command from '@ckeditor/ckeditor5-core/src/command.js';
+import ModelTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/modeltesteditor.js';
+import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 
 describe( 'HighlightCommand', () => {
 	let editor, model, doc, root, command;
@@ -187,6 +187,40 @@ describe( 'HighlightCommand', () => {
 					expect( command.value ).to.equal( 'pinkMarker' );
 					expect( doc.selection.getAttribute( 'highlight' ) ).to.equal( 'pinkMarker' );
 				} );
+
+				it( 'should not change entire highlight when at the end of highlighted text', () => {
+					setData( model, '<p>abc<$text highlight="yellowMarker">foobar</$text>[]xyz</p>' );
+
+					expect( command.value ).to.equal( 'yellowMarker' );
+
+					command.execute( { value: 'greenMarker' } );
+
+					expect( getData( model, { withoutSelection: true } ) ).to.equal(
+						'<p>abc<$text highlight="yellowMarker">foobar</$text>xyz</p>'
+					);
+
+					expect( command.value ).to.equal( 'greenMarker' );
+				} );
+
+				it( 'should not remove entire highlight when at the end of highlighted text of the same value', () => {
+					setData( model, '<p>abc<$text highlight="yellowMarker">foobar</$text>[]xyz</p>' );
+
+					expect( command.value ).to.equal( 'yellowMarker' );
+
+					command.execute( { value: 'yellowMarker' } );
+
+					expect( getData( model ) ).to.equal( '<p>abc<$text highlight="yellowMarker">foobar</$text>[]xyz</p>' );
+
+					expect( command.value ).to.be.undefined;
+				} );
+
+				it( 'should change selection attribute when at the end of highlighted text', () => {
+					setData( model, '<p>abc<$text highlight="yellowMarker">foobar</$text>[]xyz</p>' );
+
+					command.execute( { value: 'greenMarker' } );
+
+					expect( doc.selection.getAttribute( 'highlight' ) ).to.equal( 'greenMarker' );
+				} );
 			} );
 
 			describe( 'on not collapsed range', () => {
@@ -247,6 +281,18 @@ describe( 'HighlightCommand', () => {
 					command.execute();
 
 					expect( getData( model ) ).to.equal( '<p>abcfoo[]barxyz</p>' );
+
+					expect( command.value ).to.be.undefined;
+				} );
+
+				it( 'should not remove entire highlight when at the end of highlighted text', () => {
+					setData( model, '<p>abc<$text highlight="yellowMarker">foobar</$text>[]xyz</p>' );
+
+					expect( command.value ).to.equal( 'yellowMarker' );
+
+					command.execute();
+
+					expect( getData( model ) ).to.equal( '<p>abc<$text highlight="yellowMarker">foobar</$text>[]xyz</p>' );
 
 					expect( command.value ).to.be.undefined;
 				} );

@@ -1,23 +1,26 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* global setTimeout */
 
-import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
-import Clipboard from '@ckeditor/ckeditor5-clipboard/src/clipboard';
-import Link from '@ckeditor/ckeditor5-link/src/link';
-import Table from '@ckeditor/ckeditor5-table/src/table';
-import Typing from '@ckeditor/ckeditor5-typing/src/typing';
-import Undo from '@ckeditor/ckeditor5-undo/src/undo';
-import global from '@ckeditor/ckeditor5-utils/src/dom/global';
-import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
+import ClassicTestEditor from '@ckeditor/ckeditor5-core/tests/_utils/classictesteditor.js';
+import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import Clipboard from '@ckeditor/ckeditor5-clipboard/src/clipboard.js';
+import Link from '@ckeditor/ckeditor5-link/src/link.js';
+import LinkImage from '@ckeditor/ckeditor5-link/src/linkimage.js';
+import Table from '@ckeditor/ckeditor5-table/src/table.js';
+import Typing from '@ckeditor/ckeditor5-typing/src/typing.js';
+import Undo from '@ckeditor/ckeditor5-undo/src/undo.js';
+import global from '@ckeditor/ckeditor5-utils/src/dom/global.js';
+import DomEventData from '@ckeditor/ckeditor5-engine/src/view/observer/domeventdata.js';
+import { getData, setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
 
-import Image from '../src/image';
-import ImageCaption from '../src/imagecaption';
-import AutoImage from '../src/autoimage';
+import Image from '../src/image.js';
+import ImageUtils from '../src/imageutils.js';
+import ImageCaption from '../src/imagecaption.js';
+import AutoImage from '../src/autoimage.js';
 
 describe( 'AutoImage - integration', () => {
 	let editorElement, editor;
@@ -28,7 +31,8 @@ describe( 'AutoImage - integration', () => {
 
 		return ClassicTestEditor
 			.create( editorElement, {
-				plugins: [ Typing, Paragraph, Link, Image, ImageCaption, AutoImage ]
+				plugins: [ Typing, Paragraph, Link, Image, LinkImage, ImageCaption, AutoImage ],
+				image: { insert: { type: 'auto' } }
 			} )
 			.then( newEditor => {
 				editor = newEditor;
@@ -41,12 +45,16 @@ describe( 'AutoImage - integration', () => {
 		return editor.destroy();
 	} );
 
-	it( 'should load Clipboard plugin', () => {
-		expect( editor.plugins.get( Clipboard ) ).to.instanceOf( Clipboard );
+	it( 'should load the Clipboard plugin', () => {
+		expect( AutoImage.requires ).to.include( Clipboard );
 	} );
 
-	it( 'should load Undo plugin', () => {
-		expect( editor.plugins.get( Undo ) ).to.instanceOf( Undo );
+	it( 'should load the Undo plugin', () => {
+		expect( AutoImage.requires ).to.include( Undo );
+	} );
+
+	it( 'should load the ImageUtils plugin', () => {
+		expect( AutoImage.requires ).to.include( ImageUtils );
 	} );
 
 	it( 'has proper name', () => {
@@ -75,7 +83,7 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'[<image src="http://example.com/image.png"><caption></caption></image>]'
+				'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>'
 			);
 		} );
 
@@ -90,6 +98,30 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			editor.commands.execute( 'undo' );
+
+			expect( getData( editor.model ) ).to.equal(
+				'<paragraph>http://example.com/image.png[]</paragraph>'
+			);
+		} );
+
+		it( 'can undo auto-embeding by pressing backspace', () => {
+			const viewDocument = editor.editing.view.document;
+			const deleteEvent = new DomEventData(
+				viewDocument,
+				{ preventDefault: sinon.spy() },
+				{ direction: 'backward', unit: 'codePoint', sequence: 1 }
+			);
+
+			setData( editor.model, '<paragraph>[]</paragraph>' );
+			pasteHtml( editor, 'http://example.com/image.png' );
+
+			expect( getData( editor.model ) ).to.equal(
+				'<paragraph>http://example.com/image.png[]</paragraph>'
+			);
+
+			clock.tick( 100 );
+
+			viewDocument.fire( 'delete', deleteEvent );
 
 			expect( getData( editor.model ) ).to.equal(
 				'<paragraph>http://example.com/image.png[]</paragraph>'
@@ -111,7 +143,10 @@ describe( 'AutoImage - integration', () => {
 				'http://example.com/image.JPG',
 				'http://example.com%20Fimage.png',
 				'http://example.com/image.png?foo=bar',
-				'http://example.com/image.png#foo'
+				'http://example.com/image.png#',
+				'http://example.com/image.png#foo',
+				'http://example.com/image.png?foo=bar#',
+				'http://example.com/image.png?foo=bar#baz'
 			];
 
 			for ( const supportedURL of supportedURLs ) {
@@ -122,7 +157,7 @@ describe( 'AutoImage - integration', () => {
 					clock.tick( 100 );
 
 					expect( getData( editor.model ) ).to.equal(
-						`[<image src="${ supportedURL }"><caption></caption></image>]`
+						`<paragraph>[<imageInline src="${ supportedURL }"></imageInline>]</paragraph>`
 					);
 				} );
 			}
@@ -133,7 +168,6 @@ describe( 'AutoImage - integration', () => {
 				'http://www.example.com',
 				'https://example.com',
 				'http://www.example.com/image.svg',
-				'http://www.example.com/image.webp',
 				'http://www.example.com/image.mp3',
 				'http://www.example.com/image.exe',
 				'http://www.example.com/image.txt',
@@ -154,6 +188,20 @@ describe( 'AutoImage - integration', () => {
 					);
 				} );
 			}
+
+			// s/ckeditor5/3
+			it( 'should handle invalid URL with repeated characters', () => {
+				const invalidURL = 'a.' + 'a'.repeat( 100000 );
+
+				setData( editor.model, '<paragraph>[]</paragraph>' );
+				pasteHtml( editor, invalidURL );
+
+				clock.tick( 100 );
+
+				expect( getData( editor.model ) ).to.equal(
+					`<paragraph>${ invalidURL }[]</paragraph>`
+				);
+			} );
 		} );
 
 		it( 'works for URL that was pasted as a link', () => {
@@ -164,7 +212,7 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'[<image src="http://example.com/image.png"><caption></caption></image>]'
+				'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>'
 			);
 		} );
 
@@ -175,7 +223,7 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'[<image src="http://example.com/image.png"><caption></caption></image>]'
+				'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>'
 			);
 		} );
 
@@ -186,7 +234,7 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'[<image src="http://example.com/image.png"><caption></caption></image>]'
+				'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>'
 			);
 		} );
 
@@ -197,9 +245,9 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'<paragraph>Fo</paragraph>' +
-				'[<image src="http://example.com/image.png"><caption></caption></image>]' +
-				'<paragraph>r</paragraph>'
+				'<paragraph>' +
+					'Fo[<imageInline src="http://example.com/image.png"></imageInline>]r' +
+				'</paragraph>'
 			);
 		} );
 
@@ -210,9 +258,9 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'<paragraph>Foo </paragraph>' +
-				'[<image src="http://example.com/image.png"><caption></caption></image>]' +
-				'<paragraph>Bar</paragraph>'
+				'<paragraph>' +
+					'Foo [<imageInline src="http://example.com/image.png"></imageInline>]Bar' +
+				'</paragraph>'
 			);
 		} );
 
@@ -223,9 +271,9 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'<paragraph>Foo </paragraph>' +
-				'[<image src="http://example.com/image.png"><caption></caption></image>]' +
-				'<paragraph> Baz</paragraph>'
+				'<paragraph>' +
+					'Foo [<imageInline src="http://example.com/image.png"></imageInline>] Baz' +
+				'</paragraph>'
 			);
 		} );
 
@@ -271,22 +319,22 @@ describe( 'AutoImage - integration', () => {
 
 		// #47
 		it( 'does not transform a valid URL into a image if the element cannot be placed in the current position', () => {
-			setData( editor.model, '<image src="/assets/sample.png"><caption>Foo.[]</caption></image>' );
+			setData( editor.model, '<imageBlock src="/assets/sample.png"><caption>Foo.[]</caption></imageBlock>' );
 			pasteHtml( editor, 'http://example.com/image.png' );
 
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'<image src="/assets/sample.png"><caption>' +
+				'<imageBlock src="/assets/sample.png"><caption>' +
 				'Foo.http://example.com/image.png[]' +
-				'</caption></image>'
+				'</caption></imageBlock>'
 			);
 		} );
 
 		it( 'replaces a URL in image if pasted a link when other image element was selected', () => {
 			setData(
 				editor.model,
-				'[<image src="http://example.com/image.png"><caption></caption></image>]'
+				'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>'
 			);
 
 			pasteHtml( editor, 'http://example.com/image2.png' );
@@ -294,7 +342,7 @@ describe( 'AutoImage - integration', () => {
 			clock.tick( 100 );
 
 			expect( getData( editor.model ) ).to.equal(
-				'[<image src="http://example.com/image2.png"><caption></caption></image>]'
+				'<paragraph>[<imageInline src="http://example.com/image2.png"></imageInline>]</paragraph>'
 			);
 		} );
 
@@ -302,7 +350,7 @@ describe( 'AutoImage - integration', () => {
 			setData(
 				editor.model,
 				'<paragraph>Foo. <$text linkHref="https://cksource.com">Bar</$text></paragraph>' +
-				'[<image src="http://example.com/image.png"><caption></caption></image>]' +
+				'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>' +
 				'<paragraph><$text>Bar</$text>.</paragraph>'
 			);
 
@@ -312,8 +360,23 @@ describe( 'AutoImage - integration', () => {
 
 			expect( getData( editor.model ) ).to.equal(
 				'<paragraph>Foo. <$text linkHref="https://cksource.com">Bar</$text></paragraph>' +
-				'[<image src="http://example.com/image2.png"><caption></caption></image>]' +
+				'<paragraph>[<imageInline src="http://example.com/image2.png"></imageInline>]</paragraph>' +
 				'<paragraph>Bar.</paragraph>'
+			);
+		} );
+
+		it( 'should insert an image into a link and preserve its continuity (LinkImage integration)', () => {
+			setData( editor.model, '<paragraph><$text linkHref="https://cksource.com">linked[]text</$text></paragraph>' );
+			pasteHtml( editor, 'http://example.com/image.png' );
+
+			clock.tick( 100 );
+
+			expect( getData( editor.model ) ).to.equal(
+				'<paragraph>' +
+					'<$text linkHref="https://cksource.com">linked</$text>' +
+					'[<imageInline linkHref="https://cksource.com" src="http://example.com/image.png"></imageInline>]' +
+					'<$text linkHref="https://cksource.com">text</$text>' +
+				'</paragraph>'
 			);
 		} );
 	} );
@@ -374,7 +437,7 @@ describe( 'AutoImage - integration', () => {
 				const rootEl = editor.model.document.getRoot();
 
 				setTimeout( () => {
-					editor.model.enqueueChange( 'transparent', writer => {
+					editor.model.enqueueChange( { isUndoable: false }, writer => {
 						writer.insertText( characters[ i ], writer.createPositionFromPath( rootEl, [ 0, i ] ) );
 					} );
 				}, i * 5 );
@@ -382,8 +445,7 @@ describe( 'AutoImage - integration', () => {
 
 			setTimeout( () => {
 				expect( getData( editor.model ) ).to.equal(
-					'[<image src="http://example.com/image.png"><caption></caption></image>]' +
-					'<paragraph>ABCDEFGHIJ</paragraph>'
+					'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]ABCDEFGHIJ</paragraph>'
 				);
 
 				done();
@@ -397,7 +459,7 @@ describe( 'AutoImage - integration', () => {
 
 			for ( let i = 0; i < 10; ++i ) {
 				setTimeout( () => {
-					editor.model.enqueueChange( 'transparent', writer => {
+					editor.model.enqueueChange( { isUndoable: false }, writer => {
 						writer.insertText( characters[ i ], editor.model.document.selection.getFirstPosition() );
 					} );
 				}, i * 5 );
@@ -405,8 +467,7 @@ describe( 'AutoImage - integration', () => {
 
 			setTimeout( () => {
 				expect( getData( editor.model ) ).to.equal(
-					'[<image src="http://example.com/image.png"><caption></caption></image>]' +
-					'<paragraph>ABCDEFGHIJ</paragraph>'
+					'<paragraph>[<imageInline src="http://example.com/image.png"></imageInline>]ABCDEFGHIJ</paragraph>'
 				);
 
 				done();
@@ -418,14 +479,13 @@ describe( 'AutoImage - integration', () => {
 
 			pasteHtml( editor, 'http://example.com/image.png' );
 
-			editor.model.enqueueChange( 'transparent', writer => {
+			editor.model.enqueueChange( { isUndoable: false }, writer => {
 				writer.remove( writer.createRangeOn( editor.model.document.getRoot().getChild( 1 ) ) );
 			} );
 
 			setTimeout( () => {
 				expect( getData( editor.model ) ).to.equal(
-					'<paragraph>Foo.</paragraph>' +
-					'[<image src="http://example.com/image.png"><caption></caption></image>]'
+					'<paragraph>Foo.[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>'
 				);
 
 				done();
@@ -437,7 +497,7 @@ describe( 'AutoImage - integration', () => {
 
 			pasteHtml( editor, 'http://example.com/image.png' );
 
-			editor.model.enqueueChange( 'transparent', writer => {
+			editor.model.enqueueChange( { isUndoable: false }, writer => {
 				const paragraph = writer.createElement( 'paragraph' );
 				writer.insert( paragraph, writer.createPositionAfter( editor.model.document.getRoot().getChild( 0 ) ) );
 				writer.setSelection( paragraph, 'in' );
@@ -445,7 +505,7 @@ describe( 'AutoImage - integration', () => {
 
 			for ( let i = 0; i < 10; ++i ) {
 				setTimeout( () => {
-					editor.model.enqueueChange( 'transparent', writer => {
+					editor.model.enqueueChange( { isUndoable: false }, writer => {
 						writer.insertText( characters[ i ], editor.model.document.selection.getFirstPosition() );
 					} );
 				}, i * 5 );
@@ -455,8 +515,9 @@ describe( 'AutoImage - integration', () => {
 				expect( getData( editor.model ) ).to.equal(
 					'<paragraph>Foo.</paragraph>' +
 					'<paragraph>ABCDEFGHIJ</paragraph>' +
-					'<paragraph>Bar.</paragraph>' +
-					'[<image src="http://example.com/image.png"><caption></caption></image>]'
+					'<paragraph>Bar.' +
+						'[<imageInline src="http://example.com/image.png"></imageInline>]' +
+					'</paragraph>'
 				);
 
 				done();
@@ -468,7 +529,7 @@ describe( 'AutoImage - integration', () => {
 
 			pasteHtml( editor, 'http://example.com/image.png' );
 
-			editor.model.enqueueChange( 'transparent', writer => {
+			editor.model.enqueueChange( { isUndoable: false }, writer => {
 				const paragraph = writer.createElement( 'paragraph' );
 				writer.insert( paragraph, writer.createPositionAfter( editor.model.document.getRoot().getChild( 1 ) ) );
 				writer.setSelection( paragraph, 'in' );
@@ -476,7 +537,7 @@ describe( 'AutoImage - integration', () => {
 
 			for ( let i = 0; i < 10; ++i ) {
 				setTimeout( () => {
-					editor.model.enqueueChange( 'transparent', writer => {
+					editor.model.enqueueChange( { isUndoable: false }, writer => {
 						writer.insertText( characters[ i ], editor.model.document.selection.getFirstPosition() );
 					} );
 				}, i * 5 );
@@ -485,8 +546,8 @@ describe( 'AutoImage - integration', () => {
 			setTimeout( () => {
 				expect( getData( editor.model ) ).to.equal(
 					'<paragraph>Foo.</paragraph>' +
-					'<paragraph>Bar.</paragraph>' +
-					'[<image src="http://example.com/image.png"><caption></caption></image>]' +
+					'<paragraph>Bar.' +
+					'[<imageInline src="http://example.com/image.png"></imageInline>]</paragraph>' +
 					'<paragraph>ABCDEFGHIJ</paragraph>'
 				);
 

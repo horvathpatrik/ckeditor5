@@ -1,20 +1,32 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor';
-import Image from '../../../src/image';
-import global from '@ckeditor/ckeditor5-utils/src/dom/global';
-import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph';
-import View from '@ckeditor/ckeditor5-ui/src/view';
-import ContextualBalloon from '@ckeditor/ckeditor5-ui/src/panel/balloon/contextualballoon';
-import BalloonPanelView from '@ckeditor/ckeditor5-ui/src/panel/balloon/balloonpanelview';
-import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model';
-import { repositionContextualBalloon, getBalloonPositionData } from '../../../src/image/ui/utils';
+import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor.js';
+import Image from '../../../src/image.js';
+import global from '@ckeditor/ckeditor5-utils/src/dom/global.js';
+import Paragraph from '@ckeditor/ckeditor5-paragraph/src/paragraph.js';
+import View from '@ckeditor/ckeditor5-ui/src/view.js';
+import ContextualBalloon from '@ckeditor/ckeditor5-ui/src/panel/balloon/contextualballoon.js';
+import BalloonPanelView from '@ckeditor/ckeditor5-ui/src/panel/balloon/balloonpanelview.js';
+import { setData } from '@ckeditor/ckeditor5-engine/src/dev-utils/model.js';
+import { repositionContextualBalloon, getBalloonPositionData } from '../../../src/image/ui/utils.js';
+import ImageCaption from '../../../src/imagecaption.js';
 
 describe( 'Utils', () => {
-	let editor, editingView, balloon, editorElement;
+	const defaultPositions = BalloonPanelView.defaultPositions;
+	const positions = [
+		defaultPositions.northArrowSouth,
+		defaultPositions.northArrowSouthWest,
+		defaultPositions.northArrowSouthEast,
+		defaultPositions.southArrowNorth,
+		defaultPositions.southArrowNorthWest,
+		defaultPositions.southArrowNorthEast,
+		defaultPositions.viewportStickyNorth
+	];
+
+	let editor, converter, selection, balloon, editorElement;
 
 	beforeEach( () => {
 		editorElement = global.document.createElement( 'div' );
@@ -22,11 +34,12 @@ describe( 'Utils', () => {
 
 		return ClassicEditor
 			.create( editorElement, {
-				plugins: [ Image, Paragraph, ContextualBalloon ]
+				plugins: [ Image, Paragraph, ContextualBalloon, ImageCaption ]
 			} )
 			.then( newEditor => {
 				editor = newEditor;
-				editingView = editor.editing.view;
+				converter = editor.editing.view.domConverter;
+				selection = editor.editing.view.document.selection;
 				balloon = editor.plugins.get( 'ContextualBalloon' );
 			} );
 	} );
@@ -40,7 +53,6 @@ describe( 'Utils', () => {
 	describe( 'repositionContextualBalloon', () => {
 		it( 'should re-position the ContextualBalloon when the image is selected', () => {
 			const spy = sinon.spy( balloon, 'updatePosition' );
-			const defaultPositions = BalloonPanelView.defaultPositions;
 			const view = new View();
 
 			view.element = global.document.createElement( 'div' );
@@ -52,19 +64,34 @@ describe( 'Utils', () => {
 				}
 			} );
 
-			setData( editor.model, '[<image src=""></image>]' );
+			setData( editor.model, '[<imageBlock src=""></imageBlock>]' );
 			repositionContextualBalloon( editor );
 
 			sinon.assert.calledWithExactly( spy, {
-				target: editingView.domConverter.viewToDom( editingView.document.selection.getSelectedElement() ),
-				positions: [
-					defaultPositions.northArrowSouth,
-					defaultPositions.northArrowSouthWest,
-					defaultPositions.northArrowSouthEast,
-					defaultPositions.southArrowNorth,
-					defaultPositions.southArrowNorthWest,
-					defaultPositions.southArrowNorthEast
-				]
+				target: converter.mapViewToDom( selection.getSelectedElement() ),
+				positions
+			} );
+		} );
+
+		it( 'should re-position the ContextualBalloon when the selection is inside a block image caption', () => {
+			const spy = sinon.spy( balloon, 'updatePosition' );
+			const view = new View();
+
+			view.element = global.document.createElement( 'div' );
+
+			balloon.add( {
+				view,
+				position: {
+					target: global.document.body
+				}
+			} );
+
+			setData( editor.model, '<imageBlock src=""><caption>[Foo]</caption></imageBlock>' );
+			repositionContextualBalloon( editor );
+
+			sinon.assert.calledWithExactly( spy, {
+				target: converter.mapViewToDom( selection.getFirstPosition().parent.parent.parent ),
+				positions
 			} );
 		} );
 
@@ -79,22 +106,23 @@ describe( 'Utils', () => {
 	} );
 
 	describe( 'getBalloonPositionData', () => {
-		it( 'returns the position data', () => {
-			const defaultPositions = BalloonPanelView.defaultPositions;
-
-			setData( editor.model, '[<image src=""></image>]' );
+		it( 'returns the position data if selection is on an image', () => {
+			setData( editor.model, '[<imageBlock src=""></imageBlock>]' );
 			const data = getBalloonPositionData( editor );
 
 			expect( data ).to.deep.equal( {
-				target: editingView.domConverter.viewToDom( editingView.document.selection.getSelectedElement() ),
-				positions: [
-					defaultPositions.northArrowSouth,
-					defaultPositions.northArrowSouthWest,
-					defaultPositions.northArrowSouthEast,
-					defaultPositions.southArrowNorth,
-					defaultPositions.southArrowNorthWest,
-					defaultPositions.southArrowNorthEast
-				]
+				target: converter.mapViewToDom( selection.getSelectedElement() ),
+				positions
+			} );
+		} );
+
+		it( 'returns the position data if selection is in a block image caption', () => {
+			setData( editor.model, '<imageBlock src=""><caption>Foo[]</caption></imageBlock>' );
+			const data = getBalloonPositionData( editor );
+
+			expect( data ).to.deep.equal( {
+				target: converter.mapViewToDom( selection.getFirstPosition().parent.parent.parent ),
+				positions
 			} );
 		} );
 	} );

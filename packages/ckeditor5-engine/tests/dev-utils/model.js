@@ -1,16 +1,16 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import { stringify, parse, getData, setData } from '../../src/dev-utils/model';
-import Model from '../../src/model/model';
-import DocumentFragment from '../../src/model/documentfragment';
-import Element from '../../src/model/element';
-import Text from '../../src/model/text';
-import Range from '../../src/model/range';
-import Position from '../../src/model/position';
-import count from '@ckeditor/ckeditor5-utils/src/count';
+import { stringify, parse, getData, setData } from '../../src/dev-utils/model.js';
+import Model from '../../src/model/model.js';
+import DocumentFragment from '../../src/model/documentfragment.js';
+import Element from '../../src/model/element.js';
+import Text from '../../src/model/text.js';
+import Range from '../../src/model/range.js';
+import Position from '../../src/model/position.js';
+import count from '@ckeditor/ckeditor5-utils/src/count.js';
 
 describe( 'model test utils', () => {
 	let model, document, root, selection;
@@ -130,6 +130,22 @@ describe( 'model test utils', () => {
 			expect( args[ 0 ] ).to.equal( data );
 		} );
 
+		it( 'should use model#enqueueChange method if the batchType option was provided', () => {
+			const changeSpy = sinon.spy( model, 'enqueueChange' );
+			const batchType = { isUndoable: true };
+			setData( model, 'text', { batchType } );
+
+			sinon.assert.calledTwice( changeSpy );
+			sinon.assert.calledWith( changeSpy, batchType );
+		} );
+
+		it( 'should use model#change method if no batchType option was provided', () => {
+			const changeSpy = sinon.spy( model, 'change' );
+			setData( model, 'text', {} );
+
+			sinon.assert.calledOnce( changeSpy );
+		} );
+
 		it( 'should insert text', () => {
 			testUtils( 'this is test text', '[]this is test text' );
 		} );
@@ -193,8 +209,7 @@ describe( 'model test utils', () => {
 		it( 'should work in a special root', () => {
 			const model = new Model();
 
-			model.schema.register( 'textOnly' );
-			model.schema.extend( '$text', { allowIn: 'textOnly' } );
+			model.schema.register( 'textOnly', { allowChildren: '$text' } );
 			model.document.createRoot( 'textOnly', 'textOnly' );
 
 			setData( model, 'a[b]c', { rootName: 'textOnly' } );
@@ -537,6 +552,21 @@ describe( 'model test utils', () => {
 			}
 		} );
 
+		it( 'should correctly parse whitespaces around custom inline object elements', () => {
+			model.schema.register( 'inlineObj', {
+				inheritAllFrom: '$inlineObject'
+			} );
+
+			const parsed = parse(
+				'<paragraph>Foo <inlineObj></inlineObj> bar</paragraph>',
+				model.schema,
+				{ inlineObjectElements: [ 'inlineObj' ] }
+			);
+
+			expect( parsed.getChild( 0 ).data ).to.equal( 'Foo ' );
+			expect( parsed.getChild( 2 ).data ).to.equal( ' bar' );
+		} );
+
 		it( 'throws when invalid XML', () => {
 			expect( () => {
 				parse( '<a><b></a></b>', model.schema );
@@ -559,8 +589,7 @@ describe( 'model test utils', () => {
 
 		it( 'converts data in the specified context', () => {
 			const model = new Model();
-			model.schema.register( 'foo' );
-			model.schema.extend( '$text', { allowIn: 'foo' } );
+			model.schema.register( 'foo', { allowChildren: '$text' } );
 
 			expect( () => {
 				parse( 'text', model.schema, { context: [ 'foo' ] } );

@@ -1,23 +1,23 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import Range from '../../src/model/range';
-import Position from '../../src/model/position';
-import Element from '../../src/model/element';
-import Text from '../../src/model/text';
-import Model from '../../src/model/model';
-import TreeWalker from '../../src/model/treewalker';
-import MarkerOperation from '../../src/model/operation/markeroperation';
-import AttributeOperation from '../../src/model/operation/attributeoperation';
-import InsertOperation from '../../src/model/operation/insertoperation';
-import MoveOperation from '../../src/model/operation/moveoperation';
-import RenameOperation from '../../src/model/operation/renameoperation';
-import MergeOperation from '../../src/model/operation/mergeoperation';
-import SplitOperation from '../../src/model/operation/splitoperation';
+import Range from '../../src/model/range.js';
+import Position from '../../src/model/position.js';
+import Element from '../../src/model/element.js';
+import Text from '../../src/model/text.js';
+import Model from '../../src/model/model.js';
+import TreeWalker from '../../src/model/treewalker.js';
+import MarkerOperation from '../../src/model/operation/markeroperation.js';
+import AttributeOperation from '../../src/model/operation/attributeoperation.js';
+import InsertOperation from '../../src/model/operation/insertoperation.js';
+import MoveOperation from '../../src/model/operation/moveoperation.js';
+import RenameOperation from '../../src/model/operation/renameoperation.js';
+import MergeOperation from '../../src/model/operation/mergeoperation.js';
+import SplitOperation from '../../src/model/operation/splitoperation.js';
 
-import { expectToThrowCKEditorError } from '@ckeditor/ckeditor5-utils/tests/_utils/utils';
+import { expectToThrowCKEditorError } from '@ckeditor/ckeditor5-utils/tests/_utils/utils.js';
 
 describe( 'Range', () => {
 	let doc, range, start, end, root, otherRoot, gy, model;
@@ -1089,7 +1089,10 @@ describe( 'Range', () => {
 			it( 'split inside range', () => {
 				range = new Range( new Position( root, [ 0, 2 ] ), new Position( root, [ 0, 4 ] ) );
 
-				const op = new SplitOperation( new Position( root, [ 0, 3 ] ), 6, gyPos, 1 );
+				const splitPosition = new Position( root, [ 0, 3 ] );
+				const insertionPosition = SplitOperation.getInsertionPosition( splitPosition );
+
+				const op = new SplitOperation( splitPosition, 6, insertionPosition, gyPos, 1 );
 				const transformed = range.getTransformedByOperation( op );
 
 				expect( transformed.length ).to.equal( 1 );
@@ -1100,7 +1103,10 @@ describe( 'Range', () => {
 			it( 'split at the beginning of multi-element range', () => {
 				range = new Range( new Position( root, [ 0, 4 ] ), new Position( root, [ 1, 2 ] ) );
 
-				const op = new SplitOperation( new Position( root, [ 0, 4 ] ), 5, gyPos, 1 );
+				const splitPosition = new Position( root, [ 0, 4 ] );
+				const insertionPosition = SplitOperation.getInsertionPosition( splitPosition );
+
+				const op = new SplitOperation( splitPosition, 5, insertionPosition, gyPos, 1 );
 				const transformed = range.getTransformedByOperation( op );
 
 				expect( transformed.length ).to.equal( 1 );
@@ -1111,7 +1117,10 @@ describe( 'Range', () => {
 			it( 'split inside range which starts at the beginning of split element', () => {
 				range = new Range( new Position( root, [ 0, 0 ] ), new Position( root, [ 0, 4 ] ) );
 
-				const op = new SplitOperation( new Position( root, [ 0, 3 ] ), 6, gyPos, 1 );
+				const splitPosition = new Position( root, [ 0, 3 ] );
+				const insertionPosition = SplitOperation.getInsertionPosition( splitPosition );
+
+				const op = new SplitOperation( splitPosition, 6, insertionPosition, gyPos, 1 );
 				const transformed = range.getTransformedByOperation( op );
 
 				expect( transformed.length ).to.equal( 1 );
@@ -1122,7 +1131,10 @@ describe( 'Range', () => {
 			it( 'split inside range which end is at the end of split element', () => {
 				range = new Range( new Position( root, [ 0, 3 ] ), new Position( root, [ 0, 6 ] ) );
 
-				const op = new SplitOperation( new Position( root, [ 0, 4 ] ), 5, gyPos, 1 );
+				const splitPosition = new Position( root, [ 0, 4 ] );
+				const insertionPosition = SplitOperation.getInsertionPosition( splitPosition );
+
+				const op = new SplitOperation( splitPosition, 5, insertionPosition, gyPos, 1 );
 				const transformed = range.getTransformedByOperation( op );
 
 				expect( transformed.length ).to.equal( 1 );
@@ -1133,7 +1145,10 @@ describe( 'Range', () => {
 			it( 'split element which has collapsed range at the end', () => {
 				range = new Range( new Position( root, [ 0, 6 ] ), new Position( root, [ 0, 6 ] ) );
 
-				const op = new SplitOperation( new Position( root, [ 0, 3 ] ), 6, gyPos, 1 );
+				const splitPosition = new Position( root, [ 0, 3 ] );
+				const insertionPosition = SplitOperation.getInsertionPosition( splitPosition );
+
+				const op = new SplitOperation( splitPosition, 6, insertionPosition, gyPos, 1 );
 				const transformed = range.getTransformedByOperation( op );
 
 				expect( transformed.length ).to.equal( 1 );
@@ -1144,7 +1159,10 @@ describe( 'Range', () => {
 			it( 'split element which is the last element in the range', () => {
 				range = new Range( new Position( root, [ 1 ] ), new Position( root, [ 3 ] ) );
 
-				const op = new SplitOperation( new Position( root, [ 2, 0 ] ), 6, gyPos, 1 );
+				const splitPosition = new Position( root, [ 2, 0 ] );
+				const insertionPosition = SplitOperation.getInsertionPosition( splitPosition );
+
+				const op = new SplitOperation( splitPosition, 6, insertionPosition, gyPos, 1 );
 				const transformed = range.getTransformedByOperation( op );
 
 				expect( transformed.length ).to.equal( 1 );

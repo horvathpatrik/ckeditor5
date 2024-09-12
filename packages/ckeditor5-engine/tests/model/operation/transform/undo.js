@@ -1,13 +1,13 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 import { Client, expectClients, clearBuffer } from './utils.js';
 
-import DocumentFragment from '../../../../src/model/documentfragment';
-import Element from '../../../../src/model/element';
-import Text from '../../../../src/model/text';
+import DocumentFragment from '../../../../src/model/documentfragment.js';
+import Element from '../../../../src/model/element.js';
+import Text from '../../../../src/model/text.js';
 
 describe( 'transform', () => {
 	let john;
@@ -318,6 +318,59 @@ describe( 'transform', () => {
 		expectClients( '<paragraph>Foo1</paragraph><paragraph>2Bar</paragraph>' );
 	} );
 
+	// Following case was throwing before a fix was applied:
+	//
+	// [] is selection and a marker. It is copied and pasted between XY. And then undone:
+	//
+	// <p>A[A</p><p>B]B</p><p>XY</p>
+	// <p>A[A</p><p>B]B</p><p>X[A</p><p>B]Y</p>
+	// <p>A[A</p><p>B]B</p><p>XY</p>
+	//
+	it( 'paste with markers, undo, redo', () => {
+		john.setData( '<paragraph>AA</paragraph><paragraph>BB</paragraph><paragraph>X[]Y</paragraph>' );
+
+		john.editor.model.change( writer => {
+			// Simulate copy. Create a document fragment that includes expected copied fragment + marker.
+			// <paragraph><$marker />A</paragraph><paragraph>B<$marker /></paragraph>
+			const docFrag = writer.createDocumentFragment();
+			const pA = writer.createElement( 'paragraph' );
+			const pB = writer.createElement( 'paragraph' );
+
+			writer.insertText( 'A', pA, 0 );
+			writer.insertText( 'B', pB, 0 );
+			writer.insert( pA, docFrag, 0 );
+			writer.insert( pB, docFrag, 1 );
+
+			const marker = writer.createRange( writer.createPositionAt( pA, 0 ), writer.createPositionAt( pB, 1 ) );
+			docFrag.markers.set( 'm', marker );
+
+			// Insert the document fragment (simulates paste).
+			john.setSelection( [ 2, 1 ], [ 2, 1 ] );
+			john.insertContent( docFrag );
+		} );
+
+		expectClients(
+			'<paragraph>AA</paragraph>' +
+			'<paragraph>BB</paragraph>' +
+			'<paragraph>X<m:start></m:start>A</paragraph>' +
+			'<paragraph>B<m:end></m:end>Y</paragraph>'
+		);
+
+		john.undo();
+		expectClients( '<paragraph>AA</paragraph><paragraph>BB</paragraph><paragraph>XY</paragraph>' );
+
+		john.redo();
+		expectClients(
+			'<paragraph>AA</paragraph>' +
+			'<paragraph>BB</paragraph>' +
+			'<paragraph>X<m:start></m:start>A</paragraph>' +
+			'<paragraph>B<m:end></m:end>Y</paragraph>'
+		);
+
+		john.undo();
+		expectClients( '<paragraph>AA</paragraph><paragraph>BB</paragraph><paragraph>XY</paragraph>' );
+	} );
+
 	it( 'selection attribute setting: split, bold, merge, undo, undo, undo', () => {
 		// This test is ported from undo to keep 100% CC in engine.
 		john.setData( '<paragraph>Foo[]</paragraph><paragraph>Bar</paragraph>' );
@@ -325,7 +378,7 @@ describe( 'transform', () => {
 		john.split();
 		john.setSelection( [ 1, 0 ] );
 		john._processExecute( 'bold' );
-		john._processExecute( 'forwardDelete' );
+		john._processExecute( 'deleteForward' );
 
 		expectClients( '<paragraph>Foo</paragraph><paragraph>Bar</paragraph>' );
 
@@ -685,5 +738,44 @@ describe( 'transform', () => {
 		john.redo();
 
 		expectClients( '<paragraph>AbFoo</paragraph><paragraph>Baryz</paragraph>' );
+	} );
+
+	// https://github.com/ckeditor/ckeditor5/issues/8870
+	it( 'object, p, p, p, remove, undo', () => {
+		john.setData( '<imageBlock></imageBlock><paragraph>A</paragraph><paragraph>B[]</paragraph>' );
+
+		// I couldn't use delete command because simply executing this command several times does not
+		// work correctly when selection reaches <imageBlock></imageBlock><p>[]</p>.
+		// At this point we have custom control for firing delete event on view and I didn't want to
+		// simulate that.
+		//
+		john.remove( [ 2, 0 ], [ 2, 1 ] );
+		john.merge( [ 2 ] );
+		john.remove( [ 1, 0 ], [ 1, 1 ] );
+		john.remove( [ 1 ], [ 2 ] );
+		john.remove( [ 0 ], [ 1 ] );
+
+		john.undo();
+		john.undo();
+		john.undo();
+		john.undo();
+		john.undo();
+
+		expectClients( '<imageBlock></imageBlock><paragraph>A</paragraph><paragraph>B</paragraph>' );
+	} );
+
+	it( 'remove merged element then undo', () => {
+		john.setData( '<paragraph>Foo</paragraph>[]<paragraph>Bar</paragraph>' );
+
+		john.merge();
+		john.setSelection( [ 0, 0 ], [ 0, 6 ] );
+		john.remove();
+
+		expectClients( '<paragraph></paragraph>' );
+
+		john.undo();
+		john.undo();
+
+		expectClients( '<paragraph>Foo</paragraph><paragraph>Bar</paragraph>' );
 	} );
 } );

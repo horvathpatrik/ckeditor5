@@ -1,15 +1,16 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
-import DropdownView from '../../src/dropdown/dropdownview';
-import KeystrokeHandler from '@ckeditor/ckeditor5-utils/src/keystrokehandler';
-import { keyCodes } from '@ckeditor/ckeditor5-utils/src/keyboard';
-import ButtonView from '../../src/button/buttonview';
-import DropdownPanelView from '../../src/dropdown/dropdownpanelview';
-import global from '@ckeditor/ckeditor5-utils/src/dom/global';
-import testUtils from '@ckeditor/ckeditor5-core/tests/_utils/utils';
+import DropdownView from '../../src/dropdown/dropdownview.js';
+import KeystrokeHandler from '@ckeditor/ckeditor5-utils/src/keystrokehandler.js';
+import { keyCodes } from '@ckeditor/ckeditor5-utils/src/keyboard.js';
+import ButtonView from '../../src/button/buttonview.js';
+import DropdownPanelView from '../../src/dropdown/dropdownpanelview.js';
+import global from '@ckeditor/ckeditor5-utils/src/dom/global.js';
+import testUtils from '@ckeditor/ckeditor5-core/tests/_utils/utils.js';
+import { FocusTracker } from '@ckeditor/ckeditor5-utils';
 
 describe( 'DropdownView', () => {
 	let view, buttonView, panelView, locale;
@@ -75,6 +76,10 @@ describe( 'DropdownView', () => {
 			expect( view.keystrokes ).to.be.instanceOf( KeystrokeHandler );
 		} );
 
+		it( 'creates #focusTracker instance', () => {
+			expect( view.focusTracker ).to.be.instanceOf( FocusTracker );
+		} );
+
 		it( 'creates #element from template', () => {
 			expect( view.element.classList.contains( 'ck' ) ).to.be.true;
 			expect( view.element.classList.contains( 'ck-dropdown' ) ).to.be.true;
@@ -105,7 +110,10 @@ describe( 'DropdownView', () => {
 			} );
 
 			describe( 'view.panelView#isVisible to view#isOpen', () => {
-				it( 'is activated', () => {
+				it( 'is activated before the view gets rendered', () => {
+					const panelView = new DropdownPanelView( locale );
+					const buttonView = new ButtonView( locale );
+					const view = new DropdownView( locale, buttonView, panelView );
 					const values = [];
 
 					view.listenTo( view.panelView, 'change:isVisible', () => {
@@ -117,6 +125,10 @@ describe( 'DropdownView', () => {
 					view.isOpen = true;
 
 					expect( values ).to.have.members( [ true, false, true ] );
+
+					view.destroy();
+					buttonView.destroy();
+					panelView.destroy();
 				} );
 			} );
 
@@ -135,7 +147,13 @@ describe( 'DropdownView', () => {
 				describe( 'in "auto" mode', () => {
 					it( 'uses _getOptimalPosition() and a dedicated set of positions (LTR)', () => {
 						const spy = testUtils.sinon.spy( DropdownView, '_getOptimalPosition' );
-						const { southEast, southWest, northEast, northWest } = DropdownView.defaultPanelPositions;
+						const {
+							south, north,
+							southEast, southWest,
+							northEast, northWest,
+							southMiddleEast, southMiddleWest,
+							northMiddleEast, northMiddleWest
+						} = DropdownView.defaultPanelPositions;
 
 						view.isOpen = true;
 
@@ -143,7 +161,8 @@ describe( 'DropdownView', () => {
 							element: panelView.element,
 							target: buttonView.element,
 							positions: [
-								southEast, southWest, northEast, northWest
+								southEast, southWest, southMiddleEast, southMiddleWest, south,
+								northEast, northWest, northMiddleEast, northMiddleWest, north
 							],
 							fitInViewport: true
 						} ) );
@@ -151,7 +170,13 @@ describe( 'DropdownView', () => {
 
 					it( 'uses _getOptimalPosition() and a dedicated set of positions (RTL)', () => {
 						const spy = testUtils.sinon.spy( DropdownView, '_getOptimalPosition' );
-						const { southEast, southWest, northEast, northWest } = DropdownView.defaultPanelPositions;
+						const {
+							south, north,
+							southEast, southWest,
+							northEast, northWest,
+							southMiddleEast, southMiddleWest,
+							northMiddleEast, northMiddleWest
+						} = DropdownView.defaultPanelPositions;
 
 						view.locale.uiLanguageDirection = 'rtl';
 						view.isOpen = true;
@@ -160,10 +185,40 @@ describe( 'DropdownView', () => {
 							element: panelView.element,
 							target: buttonView.element,
 							positions: [
-								southWest, southEast, northWest, northEast
+								southWest, southEast, southMiddleWest, southMiddleEast, south,
+								northWest, northEast, northMiddleWest, northMiddleEast, north
 							],
 							fitInViewport: true
 						} ) );
+					} );
+
+					it( 'fallback when _getOptimalPosition() will return null', () => {
+						const locale = {
+							t() {}
+						};
+
+						const buttonView = new ButtonView( locale );
+						const panelView = new DropdownPanelView( locale );
+
+						const view = new DropdownView( locale, buttonView, panelView );
+						view.render();
+
+						const parentWithOverflow = global.document.createElement( 'div' );
+						parentWithOverflow.style.width = '1px';
+						parentWithOverflow.style.height = '1px';
+						parentWithOverflow.style.marginTop = '-1000px';
+						parentWithOverflow.style.overflow = 'scroll';
+
+						parentWithOverflow.appendChild( view.element );
+
+						global.document.body.appendChild( parentWithOverflow );
+
+						view.isOpen = true;
+
+						expect( view.panelView.position ).is.equal( 'southEast' ); // first position from position list.
+
+						view.element.remove();
+						parentWithOverflow.remove();
 					} );
 				} );
 			} );
@@ -195,6 +250,22 @@ describe( 'DropdownView', () => {
 	} );
 
 	describe( 'render()', () => {
+		it( 'registers child views in #focusTracker', () => {
+			const view = new DropdownView( locale,
+				new ButtonView( locale ),
+				new DropdownPanelView( locale ) );
+
+			const addSpy = sinon.spy( view.focusTracker, 'add' );
+
+			view.render();
+
+			sinon.assert.calledTwice( addSpy );
+			sinon.assert.calledWithExactly( addSpy.firstCall, view.buttonView.element );
+			sinon.assert.calledWithExactly( addSpy.secondCall, view.panelView.element );
+
+			view.destroy();
+		} );
+
 		it( 'starts listening for #keystrokes coming from #element', () => {
 			const view = new DropdownView( locale,
 				new ButtonView( locale ),
@@ -287,7 +358,7 @@ describe( 'DropdownView', () => {
 				view.keystrokes.press( keyEvtData );
 				sinon.assert.calledOnce( keyEvtData.preventDefault );
 				sinon.assert.calledOnce( keyEvtData.stopPropagation );
-				sinon.assert.calledOnce( spy );
+				sinon.assert.notCalled( spy );
 				expect( view.isOpen ).to.be.false;
 			} );
 
@@ -310,7 +381,7 @@ describe( 'DropdownView', () => {
 				view.keystrokes.press( keyEvtData );
 				sinon.assert.calledOnce( keyEvtData.preventDefault );
 				sinon.assert.calledOnce( keyEvtData.stopPropagation );
-				sinon.assert.calledOnce( spy );
+				sinon.assert.notCalled( spy );
 				expect( view.isOpen ).to.be.false;
 			} );
 		} );
@@ -335,7 +406,7 @@ describe( 'DropdownView', () => {
 			buttonRect = {
 				top: 100,
 				bottom: 200,
-				left: 100,
+				left: 500,
 				right: 200,
 				width: 100,
 				height: 100
@@ -346,19 +417,27 @@ describe( 'DropdownView', () => {
 				bottom: 0,
 				left: 0,
 				right: 0,
-				width: 50,
+				width: 400,
 				height: 50
 			};
 		} );
 
 		it( 'should have a proper length', () => {
-			expect( Object.keys( positions ) ).to.have.length( 4 );
+			expect( Object.keys( positions ) ).to.have.length( 10 );
+		} );
+
+		it( 'should define the "south" position', () => {
+			expect( positions.south( buttonRect, panelRect ) ).to.deep.equal( {
+				top: 200,
+				left: 350,
+				name: 's'
+			} );
 		} );
 
 		it( 'should define the "southEast" position', () => {
 			expect( positions.southEast( buttonRect, panelRect ) ).to.deep.equal( {
 				top: 200,
-				left: 100,
+				left: 500,
 				name: 'se'
 			} );
 		} );
@@ -366,24 +445,64 @@ describe( 'DropdownView', () => {
 		it( 'should define the "southWest" position', () => {
 			expect( positions.southWest( buttonRect, panelRect ) ).to.deep.equal( {
 				top: 200,
-				left: 150,
+				left: 200,
 				name: 'sw'
+			} );
+		} );
+
+		it( 'should define the "southMiddleEast" position', () => {
+			expect( positions.southMiddleEast( buttonRect, panelRect ) ).to.deep.equal( {
+				top: 200,
+				left: 425,
+				name: 'sme'
+			} );
+		} );
+
+		it( 'should define the "southMiddleWest" position', () => {
+			expect( positions.southMiddleWest( buttonRect, panelRect ) ).to.deep.equal( {
+				top: 200,
+				left: 275,
+				name: 'smw'
+			} );
+		} );
+
+		it( 'should define the "north" position', () => {
+			expect( positions.north( buttonRect, panelRect ) ).to.deep.equal( {
+				top: 50,
+				left: 350,
+				name: 'n'
 			} );
 		} );
 
 		it( 'should define the "northEast" position', () => {
 			expect( positions.northEast( buttonRect, panelRect ) ).to.deep.equal( {
 				top: 50,
-				left: 100,
+				left: 500,
 				name: 'ne'
 			} );
 		} );
 
 		it( 'should define the "northWest" position', () => {
 			expect( positions.northWest( buttonRect, panelRect ) ).to.deep.equal( {
-				top: 150,
-				left: 150,
+				top: 50,
+				left: 200,
 				name: 'nw'
+			} );
+		} );
+
+		it( 'should define the "northMiddleEast" position', () => {
+			expect( positions.northMiddleEast( buttonRect, panelRect ) ).to.deep.equal( {
+				top: 50,
+				left: 425,
+				name: 'nme'
+			} );
+		} );
+
+		it( 'should define the "northMiddleWest" position', () => {
+			expect( positions.northMiddleWest( buttonRect, panelRect ) ).to.deep.equal( {
+				top: 50,
+				left: 275,
+				name: 'nmw'
 			} );
 		} );
 	} );

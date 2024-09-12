@@ -1,17 +1,18 @@
 /**
- * @license Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+ * @license Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
  * For licensing, see LICENSE.md or https://ckeditor.com/legal/ckeditor-oss-license
  */
 
 /* globals console, window, document */
 
-import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor';
-import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset';
+import ClassicEditor from '@ckeditor/ckeditor5-editor-classic/src/classiceditor.js';
+import ArticlePluginSet from '@ckeditor/ckeditor5-core/tests/_utils/articlepluginset.js';
 
-createEditor( '#editor-ltr', 'en' );
-createEditor( '#editor-rtl', 'ar' );
+createEditor( '#editor-ltr', 'en', 'en' );
+createEditor( '#editor-rtl-mixed', 'ar', 'en' );
+createEditor( '#editor-rtl', 'ar', 'ar' );
 
-function createEditor( selector, language ) {
+function createEditor( selector, language, uiLanguageCode ) {
 	ClassicEditor
 		.create( document.querySelector( selector ), {
 			plugins: [ ArticlePluginSet ],
@@ -32,7 +33,7 @@ function createEditor( selector, language ) {
 				'redo'
 			],
 			image: {
-				toolbar: [ 'imageStyle:full', 'imageStyle:side', '|', 'imageTextAlternative' ]
+				toolbar: [ 'imageStyle:block', 'imageStyle:wrapText', '|', 'imageTextAlternative' ]
 			},
 			table: {
 				contentToolbar: [
@@ -41,7 +42,10 @@ function createEditor( selector, language ) {
 					'mergeTableCells'
 				]
 			},
-			language
+			language: {
+				ui: uiLanguageCode,
+				content: language
+			}
 		} )
 		.then( editor => {
 			window.editor = editor;

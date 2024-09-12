@@ -1,4 +1,4 @@
-# Copyright (c) 2003-2020, CKSource - Frederico Knabben. All rights reserved.
+# Copyright (c) 2003-2024, CKSource Holding sp. z o.o. All rights reserved.
 #
 #                                     !!! IMPORTANT !!!
 #
@@ -15,6 +15,7 @@ msgstr ""
 "Language: \n"
 "Language-Team: \n"
 "Plural-Forms: \n"
+"Content-Type: text/plain; charset=UTF-8\n"
 
 msgctxt "Toolbar button tooltip for the HTML embed feature."
 msgid "Insert HTML"
@@ -35,3 +36,11 @@ msgstr "Edit source"
 msgctxt "A label of a button that saves the HTML embed content and navigates back to the preview."
 msgid "Save changes"
 msgstr "Save changes"
+
+msgctxt "An information displayed in the HTML embed preview if the content is not previewable."
+msgid "No preview available"
+msgstr "No preview available"
+
+msgctxt "An information displayed in the HTML embed preview if the HTML snippet has no content."
+msgid "Empty snippet content"
+msgstr "Empty snippet content"

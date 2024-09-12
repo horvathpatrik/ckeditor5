@@ -50,7 +50,7 @@
     "@ckeditor/ckeditor5-paste-from-office": "43.1.0",
     "@ckeditor/ckeditor5-table": "43.1.0",
     "@ckeditor/ckeditor5-typing": "43.1.0",
-    "@ckeditor/ckeditor5-remove-format": "43.1.0",
+    "@ckeditor/ckeditor5-remove-format": "43.1.0"
   },
   "devDependencies": {
     "@ckeditor/ckeditor5-core": "43.1.0",
